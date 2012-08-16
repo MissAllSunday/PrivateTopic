@@ -1,0 +1,305 @@
+<?xml version="1.0"?>
+<!DOCTYPE modification SYSTEM "http://www.simplemachines.org/xml/modification">
+<modification xmlns="http://www.simplemachines.org/xml/modification" xmlns:smf="http://www.simplemachines.org/">
+	<id>Suki:PrivateTopics</id>
+	<name>Private Topics</name>
+	<version>1.0</version>
+	<file name="$sourcedir/Display.php">
+		<operation>
+			<search position="replace"><![CDATA[// Load the proper template and/or sub template.]]></search>
+			<add><![CDATA[/* PrivateTopics mod */
+	if (!empty($modSettings['PrivateTopics_enable']))
+	{
+		$pt = new PrivateTopics($topic);
+		$ptArray = $pt->doGet();
+		$ptTools = $pt->doTools();
+		$ptBoard = $pt->doBoard($board);
+		$ptPermissionsSee = $pt->doPermissionsSee();
+
+		if ($ptPermissionsSee == false && is_array($ptArray))
+			if ($ptBoard && !in_array($user_info['id'], $ptArray))
+				fatal_lang_error('PrivateTopics_redirect', false);
+	}
+	/* PrivateTopics mod */
+
+	// Load the proper template and/or sub template.]]></add>
+		</operation>
+	</file>
+
+	<file name="$sourcedir/Profile-View.php">
+		<operation>
+			<search position="replace"><![CDATA[// Do the code.
+		$row['body'] = parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']);
+
+		// And the array...
+		$context['posts'][$counter += $reverse ? -1 : 1] = array(
+			'body' => $row['body'],]]></search>
+			<add><![CDATA[// Do the code.
+		$row['body'] = parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']);
+
+		/* PrivateTopics mod */
+		if (!empty($modSettings['PrivateTopics_enable']))
+		{
+			$pt = new PrivateTopics($row['id_topic']);
+			$ptTools = $pt->doTools();
+			$ptBoard = $pt->doBoard($row['id_board']);
+			$ptTrue = false;
+			$ptArray = array();
+			$ptPermissionsSee = $pt->doPermissionsSee();
+
+			if (($ptCache = cache_get_data('PrivateTopics:'. $row['id_topic'] .'', 120)) == null)
+			{
+				$ptCache = $pt->doGet();
+
+				cache_put_data('PrivateTopics:'. $row['id_topic'] .'', $ptCache , 120);
+			}
+
+			if (!empty($ptCache) && is_array($ptCache) && $ptPermissionsSee == false)
+				if (!in_array($user_info['id'], $ptCache))
+					$ptTrue = true;
+		}
+
+		else
+			$ptTrue = false;
+		/* PrivateTopics mod */
+
+		// And the array...
+		$context['posts'][$counter += $reverse ? -1 : 1] = array(
+			'body' => $ptTrue ? $ptTools->getText('redirect_message') : $row['body'],]]></add>
+		</operation>
+	</file>
+
+	<file name="$sourcedir/Printpage.php">
+		<operation>
+			<search position="replace"><![CDATA[// Whatever happens don't index this]]></search>
+			<add><![CDATA[/* PrivateTopics mod */
+	if (!empty($modSettings['PrivateTopics_enable']))
+	{
+		$pt = new PrivateTopics($topic);
+		$ptArray = $pt->doGet();
+		$ptTools = $pt->doTools();
+		$ptBoard = $pt->doBoard($board_info['id']);
+		$ptPermissionsSee = $pt->doPermissionsSee();
+
+		if ($ptPermissionsSee == false && is_array($ptArray))
+			if ($ptBoard && !in_array($user_info['id'], $ptArray))
+				fatal_lang_error('PrivateTopics_redirect', false);
+	}
+	/* PrivateTopics mod */
+
+	// Whatever happens don't index this.]]></add>
+		</operation>
+	</file>
+
+	<file name="$sourcedir/Recent.php">
+		<operation>
+			<search position="replace"><![CDATA[// And build the array.]]></search>
+			<add><![CDATA[/* PrivateTopics mod */
+		if (!empty($modSettings['PrivateTopics_enable']))
+		{
+			$pt = new PrivateTopics($row['id_topic']);
+			$ptTools = $pt->doTools();
+			$ptBoard = $pt->doBoard($row['id_board']);
+			$ptTrue = false;
+			$ptArray = array();
+
+			if (($ptCache = cache_get_data('PrivateTopics:'. $row['id_topic'] .'', 120)) == null)
+			{
+				$ptCache = $pt->doGet();
+
+				cache_put_data('PrivateTopics:'. $row['id_topic'] .'', $ptCache , 120);
+			}
+
+			if (!empty($ptCache) && is_array($ptCache))
+				if (!in_array($user_info['id'], $ptCache))
+					$ptTrue = true;
+		}
+
+		else
+			$ptTrue = false;
+		/* PrivateTopics mod */
+
+		// And build the array.]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA['message' => $row['body'],]]></search>
+			<add><![CDATA['message' => $ptTrue ? $ptTools->getText('redirect_message') : $row['body'],]]></add>
+		</operation>
+	</file>
+
+	<file name="$sourcedir/Post.php">
+		<operation>
+			<search position="replace"><![CDATA[// This is an already existing message. Edit it.]]></search>
+			<add><![CDATA[/* PrivateTopics mod */
+	$ptsave = false;
+
+	if (!empty($modSettings['PrivateTopics_enable']) && !empty($_REQUEST['ptenable']))
+	{
+		/* Do they used the auto-suggest thing? */
+		if (!empty($_POST['recipient_to']) && empty($_POST['ptusers']))
+		{
+			foreach ($_POST['recipient_to'] as $u)
+				$ptuserstemp[$u] = (int) $u;
+
+			foreach ($ptuserstemp as $key => $value)
+				if ($value == '')
+					unset($ptuserstemp[$key]);
+
+			/* Let's include the topic creator to the array */
+			$ptuserstemp[$user_info['id']] = $user_info['id'];
+
+			$ptuserstemp = array_unique($ptuserstemp);
+
+			$ptusers = implode(',', $ptuserstemp);
+		}
+
+		/* No? then do it the old way instead */
+		elseif(!empty($_POST['ptusers']) && empty($_POST['recipient_to']))
+		{
+			$usersToLoad = array();
+
+			$_POST['ptusers'] = explode(',', trim($_POST['ptusers']));
+
+			foreach ($_POST['ptusers'] as $k => $v)
+			{
+				if (empty($v))
+					unset($_POST['ptusers'][$k]);
+
+				else
+					$usersToLoad[] = trim($v);
+			}
+
+			foreach($usersToLoad as $m)
+				if ($user = loadMemberData($m, true, 'minimal'))
+					$ptuserstemp[$user[0]] = $user[0];
+
+			/* Let's include the topic creator to the array */
+			$ptuserstemp[$user_info['id']] = $user_info['id'];
+
+			$ptuserstemp2 = array_unique($ptuserstemp);
+
+			/* Done, fill up the array */
+			$ptusers = implode(',', $ptuserstemp2);
+		}
+
+		/* Let's send a pm to every member we dont' need to to send the pm to the topic author */
+		$pmToSend = array();
+
+		foreach ($ptuserstemp2 as $uk => $uv)
+			if ($uv != $user_info['id'])
+				$pmToSend[] = $uv;
+
+		$pt = new PrivateTopics($topicOptions['id'], $ptusers);
+		$ptBoard = $pt->doBoard($topicOptions['board']);
+		$ptTools = $pt->doTools();
+
+		$ptsave = true;
+	}
+
+	// This is an already existing message. Edit it.]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[modifyPost($msgOptions, $topicOptions, $posterOptions);]]></search>
+			<add><![CDATA[if ($ptsave)
+			$pt->doUpdate();
+
+		modifyPost($msgOptions, $topicOptions, $posterOptions);]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[if (isset($topicOptions['id']))
+			$topic = $topicOptions['id'];]]></search>
+			<add><![CDATA[if (isset($topicOptions['id']))
+			$topic = $topicOptions['id'];
+
+		if ($ptsave)
+		{
+			$pt->doSave($topic);
+
+			/* Send the pm */
+			global $scripturl;
+
+			$recipients = array(
+				'bcc' => array(),
+				'to' => $pmToSend
+			);
+			$from = array(
+					'id' => $user_info['id'],
+					'name' => $user_info['name'],
+					'username' => $user_info['username'],
+				);
+			$ptTopicUrl = $scripturl . '?topic=' . $topic . '.0';
+			$ptUserSend = $user_info['username'];
+			$ptMessage = sprintf($ptTools->getText('pm_message'), $ptTopicUrl, $ptUserSend);
+
+			sendpm($recipients, $ptTools->getText('pm_subject'), $ptMessage, false, $from);
+		}]]></add>
+		</operation>
+	</file>
+
+	<file name="$themedir/Post.template.php">
+		<operation>
+			<search position="replace"><![CDATA[// Now show the subject box for this post.]]></search>
+			<add><![CDATA[/* Private Topics mod */
+	$pt = new PrivateTopics();
+	$ptBoard = $pt->doBoard($context['current_board']);
+	$ptCanSet = $pt->doPermissionsSet();
+
+	if (!empty($modSettings['PrivateTopics_enable']) && !empty($ptBoard) && $ptCanSet && !isset($context['previous_posts']))
+	{
+		echo '
+			<dt class="clear_left">
+				<span id="caption_privatetopics">', $txt['PrivateTopics_post_enable'] , ':</span>
+			</dt>
+			<dd>
+				<input type="checkbox" id="ptenable" name="ptenable"', !empty($context['ptenable']) ? ' checked="checked"' : '', ' class="input_check" />
+			</dd>';
+
+		echo '
+			<dt class="clear_left">
+				<span id="caption_privatetopics">', $txt['PrivateTopics_post_message'] , ':</span>
+			</dt>
+			<dd>
+				<input type="text" name="ptusers" id="ptusers" tabindex="', $context['tabindex']++, '" ', !isset($context['ptusers']) ? '' : ' value="' . $context['ptusers'] . '"', ' size="40" maxlength="80" class="input_text" />
+			<div id="to_item_list_container"></div></dd>';
+	}
+
+	// Now show the subject box for this post.]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[}
+
+// The template for the spellchecker.]]></search>
+			<add><![CDATA[echo '
+		<script type="text/javascript" src="', $settings['default_theme_url'], '/scripts/PersonalMessage.js?fin20"></script>
+		<script type="text/javascript" src="', $settings['default_theme_url'], '/scripts/suggest.js?fin20"></script>
+		<script type="text/javascript">
+
+function suggestMember()
+{
+	omemberSuggest = new smc_AutoSuggest({
+		sSelf: \'omemberSuggest\',
+		sSessionId: \'', $context['session_id'], '\',
+		sSessionVar: \'', $context['session_var'], '\',
+		sControlId: \'ptusers\',
+		sSearchType: \'member\',
+		sSearchType: \'member\',
+		sPostName: \'recipient_to\',
+		sURLMask: \'action=profile;u=%item_id%\',
+		sTextDeleteItem: \'', $txt['autosuggest_delete_item'], '\',
+		bItemList: true,
+		sItemListContainerId: \'to_item_list_container\',
+	});
+}
+suggestMember();
+</script>';
+
+}
+
+// The template for the spellchecker.]]></add>
+		</operation>
+	</file>
+</modification>

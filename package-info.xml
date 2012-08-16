@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!DOCTYPE package-info SYSTEM "http://www.simplemachines.org/xml/package-info">
+
+<package-info xmlns="http://www.simplemachines.org/xml/package-info" xmlns:smf="http://www.simplemachines.org/">
+	<id>Suki:PrivateTopics</id>
+	<name>Private Topics</name>
+	<version>1.0</version>
+	<type>modification</type>
+
+	<install for="2.0 - 2.0.99">
+		<database>install.php</database>
+		<code>hooks.php</code>
+		<modification>PrivateTopics.xml</modification>
+		<require-file name="PrivateTopics.php" destination="$sourcedir">source</require-file>
+		<require-file name="PrivateTopics.english.php" destination="$languagedir">lang</require-file>
+		<redirect url="$scripturl?admin;area=privatetopics" timeout="3000"></redirect>
+	</install>
+
+	<uninstall for="2.0 - 2.0.99">
+		<code>remove.php</code>
+		<database>install.php</database>
+		<modification reverse="true">PrivateTopics.xml</modification>
+		<remove-file name="$sourcedir/PrivateTopics.php" />
+		<remove-file name="$languagedir/PrivateTopics.english.php" />
+	</uninstall>
+</package-info>
