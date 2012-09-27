@@ -149,7 +149,7 @@
 			/* Let's include the topic creator to the array */
 			$ptuserstemp[$user_info['id']] = $user_info['id'];
 
-			$ptuserstemp = array_unique($ptuserstemp);
+			$ptuserstemp2 = array_unique($ptuserstemp);
 
 			$ptusers = implode(',', $ptuserstemp);
 		}
