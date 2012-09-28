@@ -130,6 +130,22 @@
 
 	<file name="$sourcedir/Post.php">
 		<operation>
+			<search position="after"><![CDATA[// Set the destinaton.]]></search>
+			<add><![CDATA[$pt = new PrivateTopics($topic);
+		$ptArray = $pt->doGet();
+		$ptTools = $pt->doTools();
+		$ptBoard = $pt->doBoard($board);
+		$ptCanSet = $pt->doPermissionsSet();
+
+		if (!empty($modSettings['PrivateTopics_enable']) && !empty($ptBoard) && $ptCanSet)
+		{
+			$context['ptenable'] = $ptArray != 'no';
+			$context['ptusers'] = implode(',', $ptArray);
+		}
+
+		]]></add>
+		</operation>
+		<operation>
 			<search position="replace"><![CDATA[// This is an already existing message. Edit it.]]></search>
 			<add><![CDATA[/* PrivateTopics mod */
 	$ptsave = false;
@@ -149,7 +165,7 @@
 			/* Let's include the topic creator to the array */
 			$ptuserstemp[$user_info['id']] = $user_info['id'];
 
-			$ptuserstemp = array_unique($ptuserstemp);
+			$ptuserstemp2 = array_unique($ptuserstemp);
 
 			$ptusers = implode(',', $ptuserstemp);
 		}
@@ -171,7 +187,7 @@
 			}
 
 			foreach($usersToLoad as $m)
-				if ($user = loadMemberData($m, true, 'minimal'))
+				if ($user = loadMemberData($m, false, 'minimal'))
 					$ptuserstemp[$user[0]] = $user[0];
 
 			/* Let's include the topic creator to the array */
@@ -247,7 +263,7 @@
 	$ptBoard = $pt->doBoard($context['current_board']);
 	$ptCanSet = $pt->doPermissionsSet();
 
-	if (!empty($modSettings['PrivateTopics_enable']) && !empty($ptBoard) && $ptCanSet && !isset($context['previous_posts']))
+	if (!empty($modSettings['PrivateTopics_enable']) && !empty($ptBoard) && $ptCanSet)
 	{
 		echo '
 			<dt class="clear_left">
