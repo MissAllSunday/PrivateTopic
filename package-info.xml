@@ -12,6 +12,7 @@
 		<code>hooks.php</code>
 		<modification>PrivateTopics.xml</modification>
 		<require-file name="PrivateTopics.php" destination="$sourcedir">source</require-file>
+		<require-file name="PrivateTopicsTools.php" destination="$sourcedir">source</require-file>
 		<require-file name="PrivateTopics.english.php" destination="$languagedir">lang</require-file>
 		<redirect url="$scripturl?admin;area=privatetopics" timeout="3000"></redirect>
 	</install>

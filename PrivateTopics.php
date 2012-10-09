@@ -16,7 +16,7 @@
  * Version: MPL 2.0
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
- * If a copy of the MPL was not distributed with this file, 
+ * If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/
  *
  * Software distributed under the License is distributed on an "AS IS" basis,
@@ -25,6 +25,20 @@
  * License.
  *
  */
+
+/* Autoload */
+function __autoload($class_name)
+{
+	global $sourcedir;
+
+	$file_path = $sourcedir. '/'. $class_name . '.php';
+
+	if(file_exists($file_path))
+		require_once($file_path);
+
+	else
+		return false;
+}
 
 function wrapperhandler(){PrivateTopics::handler();}
 
@@ -253,91 +267,5 @@ class PrivateTopics
 		$permissionGroups['membergroup']['classic'] = array('PrivateTopics_per_classic');
 		$permissionList['membergroup']['can_set_topic_as_private'] = array(false, 'PrivateTopics_per_classic', 'PrivateTopics_per_simple');
 		$permissionList['membergroup']['can_always_see_private_topics'] = array(false, 'PrivateTopics_per_classic', 'PrivateTopics_per_simple');
-	}
-}
-
-class PrivateTopicTools
-{
-	private static $_instance;
-
-	public function __construct()
-	{
-		$this->extractAll();
-	}
-
-	public static function getInstance()
-	{
-		if (!self::$_instance)
-		{
-			self::$_instance = new PrivateTopicTools();
-		}
-		return self::$_instance;
-	}
-
-	private function extractAll()
-	{
-		global $txt, $modSettings;
-
-		loadLanguage('PrivateTopics');
-
-		$this->pattern = '/PrivateTopics_/';
-		$this->matchesSettings = array();
-
-		/* Get only the settings that we need */
-		foreach ($modSettings as $km => $vm)
-			if (preg_match($this->pattern, $km))
-			{
-				$km = str_replace('PrivateTopics_', '', $km);
-
-				/* Done? then populate the new array */
-				$this->matchesSettings[$km] = $vm;
-			}
-
-		$this->settings = $this->matchesSettings;
-
-		/* Again, this time for $txt. */
-		foreach ($txt as $kt => $vt)
-			if (preg_match($this->pattern, $kt))
-			{
-				$kt = str_replace('PrivateTopics_', '', $kt);
-				$this->matchesText[$kt] = $vt;
-			}
-
-		$this->text = $this->matchesText;
-
-		/* Done? then we don't need this anymore */
-		if (!empty($this->text) && !empty($this->settings))
-		{
-			unset($this->matchesText);
-			unset($this->matchesSettings);
-		}
-	}
-
-	/* Return true if the value do exist, false otherwise, O RLY? */
-	public function enable($var)
-	{
-		if (!empty($this->settings[$var]))
-			return true;
-		else
-			return false;
-	}
-
-	/* Get the requested setting  */
-	public function getSetting($var)
-	{
-		if (!empty($this->settings[$var]))
-			return $this->settings[$var];
-
-		else
-			return false;
-	}
-
-	public function getText($var)
-	{
-		if (!empty($this->text[$var]))
-			return $this->text[$var];
-
-		else
-			return false;
 	}
 }
