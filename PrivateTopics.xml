@@ -239,6 +239,64 @@
 		</operation>
 	</file>
 
+	<file name="$sourcedir/BoardIndex.php">
+		<operation>
+			<search position="replace"><![CDATA[$context['categories'] = getBoardIndex($boardIndexOptions);]]></search>
+			<add><![CDATA[$context['categories'] = getBoardIndex($boardIndexOptions);
+
+	/* PrivateTopics mod */
+	if (!empty($modSettings['PrivateTopics_enable']))
+		foreach ($context['categories'] as $c)
+			foreach ($c['boards'] as $b)
+			{
+				$pt = new PrivateTopics($b['last_post']['topic']);
+				$ptArray = $pt->doGet();
+				$ptTools = $pt->doTools();
+				$ptBoard = $pt->doBoard($b['id']);
+				$ptPermissionsSee = $pt->doPermissionsSee();
+
+				if ($ptPermissionsSee == false && is_array($ptArray))
+					if ($ptBoard && !in_array($user_info['id'], $ptArray))
+						$c['last_post'] = array();
+			}
+	/* PrivateTopics mod */]]></add>
+		</operation>
+	</file>
+
+	<file name="$sourcedir/MessageIndex.php">
+		<operation>
+			<search position="replace"><![CDATA[// If there are children, but no topics and no ability to post topics...]]></search>
+			<add><![CDATA[/* PrivateTopics mod */
+	if (!empty($context['topics']) && !empty($modSettings['PrivateTopics_enable']))
+		foreach ($context['topics'] as $topic)
+		{
+			$pt = new PrivateTopics($topic['id']);
+			$ptArray = $pt->doGet();
+			$ptTools = $pt->doTools();
+			$ptBoard = $pt->doBoard($board);
+			$ptPermissionsSee = $pt->doPermissionsSee();
+
+			if ($ptPermissionsSee == false && is_array($ptArray))
+				if ($ptBoard && !in_array($user_info['id'], $ptArray))
+					unset($context['topics'][$topic['id']]);
+		}
+	/* PrivateTopics mod */
+
+	// If there are children, but no topics and no ability to post topics...]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[$context['boards'] = getBoardIndex($boardIndexOptions);]]></search>
+			<add><![CDATA[$context['boards'] = getBoardIndex($boardIndexOptions);
+
+	/* PrivateTopics mod */
+	foreach ($context['boards'] as $b)
+		if (!allowedTo('can_always_see_private_topics') && $user_info['id'] != $b['last_post']['member']['id'])
+			$b['last_post'] = array();
+	/* PrivateTopics mod */]]></add>
+		</operation>
+	</file>
+
 	<file name="$themedir/Post.template.php">
 		<operation>
 			<search position="replace"><![CDATA[// Now show the subject box for this post.]]></search>
