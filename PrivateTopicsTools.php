@@ -26,7 +26,7 @@
  *
  */
  
-class PrivateTopicTools
+class PrivateTopicsTools
 {
 	/**
 	 * @var object The unique instance of the class

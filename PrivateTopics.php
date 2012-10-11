@@ -26,20 +26,6 @@
  *
  */
 
-/* Autoload */
-function __autoload($class_name)
-{
-	global $sourcedir;
-
-	$file_path = $sourcedir. '/'. $class_name . '.php';
-
-	if(file_exists($file_path))
-		require_once($file_path);
-
-	else
-		return false;
-}
-
 function wrapperhandler(){PrivateTopics::handler();}
 
 class PrivateTopics
@@ -133,7 +119,12 @@ class PrivateTopics
 
 	public function doTools()
 	{
-		return PrivateTopicTools::getInstance();
+		global $sourcedir;
+
+		if(file_exists($sourcedir. '/PrivateTopicsTools.php'))
+			require_once($sourcedir. '/PrivateTopicsTools.php');
+
+		return PrivateTopicsTools::getInstance();
 	}
 
 	public function doBoard($board)
@@ -169,7 +160,7 @@ class PrivateTopics
 
 	public static function admin(&$admin_areas)
 	{
-		$tools = PrivateTopicTools::getInstance();
+		$tools = self::doTools();
 
 		$admin_areas['config']['areas']['privatetopics'] = array(
 			'label' => $tools->getText('title'),
@@ -186,7 +177,7 @@ class PrivateTopics
 	{
 		global $scripturl, $context, $sourcedir;
 
-		$tools = PrivateTopicTools::getInstance();
+		$tools = self::doTools();
 
 		/* I can has Adminz? */
 		isAllowedTo('admin_forum');
@@ -220,7 +211,7 @@ class PrivateTopics
 		/* I can has Adminz? */
 		isAllowedTo('admin_forum');
 
-		$tools = PrivateTopicTools::getInstance();
+		$tools = self::doTools();
 
 		require_once($sourcedir . '/ManageServer.php');
 
