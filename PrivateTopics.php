@@ -39,7 +39,7 @@ class PrivateTopics
 	public function __construct($topic = false,  $users = false)
 	{
 		if (!empty($topic))
-			$this->_topic = $topic;;
+			$this->_topic = $topic;
 
 		if ($users)
 			$this->_users = $users;
@@ -143,7 +143,7 @@ class PrivateTopics
 			$array = array();
 
 		if (in_array($board, $array))
-			$this->_board = true;
+			$this->_board = $array;
 
 		return $this->_board;
 	}

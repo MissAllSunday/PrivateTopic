@@ -265,15 +265,44 @@
 		foreach ($context['categories'] as $c)
 			foreach ($c['boards'] as $b)
 			{
-				$pt = new PrivateTopics($b['last_post']['topic']);
-				$ptArray = $pt->doGet();
-				$ptTools = $pt->doTools();
-				$ptBoard = $pt->doBoard($b['id']);
-				$ptPermissionsSee = $pt->doPermissionsSee();
+				if (!empty($b['last_post']['topic']))
+				{
+					$pt = new PrivateTopics($b['last_post']['topic']);
+					$ptArray = $pt->doGet();
+					$ptTools = $pt->doTools();
+					$ptBoard = $pt->doBoard($b['id']);
+					$ptPermissionsSee = $pt->doPermissionsSee();
 
-				if ($ptPermissionsSee == false && is_array($ptArray))
-					if ($ptBoard && !in_array($user_info['id'], $ptArray))
-						$c['last_post'] = array();
+					/* Get the children boards too */
+					if (!empty($b['children']))
+						foreach ($b['children'] as $ch)
+						{
+							$ptchildBoards = $pt->doBoard($ch['id']);
+
+							if ($ptPermissionsSee == false && is_array($ptArray))
+								if ($ptchildBoards && !in_array($user_info['id'], $ptArray) && in_array($ch['id'], $ptchildBoards))
+									unset($context['categories'][$c['id']]['boards'][$b['id']]['last_post']);
+						}
+
+					if ($ptPermissionsSee == false && is_array($ptArray))
+						if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($b['id'], $ptBoard))
+							unset($context['categories'][$c['id']]['boards'][$b['id']]['last_post']);
+				}
+
+				/* We do the same for children boards */
+				if (!empty($b['children']))
+					foreach ($b['children'] as $ch)
+					{
+						$pt = new PrivateTopics($ch['last_post']['topic']);
+						$ptArray = $pt->doGet();
+						$ptTools = $pt->doTools();
+						$ptBoard = $pt->doBoard($ch['id']);
+						$ptPermissionsSee = $pt->doPermissionsSee();
+
+						if ($ptPermissionsSee == false && is_array($ptArray))
+							if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($ch['id'], $ptBoard))
+								unset($context['categories'][$c['id']]['boards'][$b['id']]['children'][$ch['id']]);
+					}
 			}
 	/* PrivateTopics mod */]]></add>
 		</operation>
@@ -283,18 +312,22 @@
 		<operation>
 			<search position="replace"><![CDATA[// If there are children, but no topics and no ability to post topics...]]></search>
 			<add><![CDATA[/* PrivateTopics mod */
-	if (!empty($context['topics']) && !empty($modSettings['PrivateTopics_enable']))
-		foreach ($context['topics'] as $topic)
+	foreach ($context['boards'] as $b)
+		if (!empty($b['last_post']))
 		{
-			$pt = new PrivateTopics($topic['id']);
+			$pt = new PrivateTopics($b['last_post']['topic']);
 			$ptArray = $pt->doGet();
 			$ptTools = $pt->doTools();
-			$ptBoard = $pt->doBoard($board);
+			$ptBoard = $pt->doBoard($b['id']);
 			$ptPermissionsSee = $pt->doPermissionsSee();
 
 			if ($ptPermissionsSee == false && is_array($ptArray))
-				if ($ptBoard && !in_array($user_info['id'], $ptArray))
-					unset($context['topics'][$topic['id']]);
+				if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($b['id'], $ptBoard))
+				{
+					unset($context['boards'][$b['id']]['last_post']);
+					unset($context['boards'][$b['id']]['topics']);
+					unset($context['boards'][$b['id']]['posts']);
+				}
 		}
 	/* PrivateTopics mod */
 
