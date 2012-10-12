@@ -335,14 +335,24 @@
 		</operation>
 
 		<operation>
-			<search position="replace"><![CDATA[$context['boards'] = getBoardIndex($boardIndexOptions);]]></search>
-			<add><![CDATA[$context['boards'] = getBoardIndex($boardIndexOptions);
+			<search position="replace"><![CDATA[// Fix the sequence of topics if they were retrieved in the wrong order. (for speed reasons...)]]></search>
+			<add><![CDATA[/* PrivateTopics mod */
+		if (!empty($modSettings['PrivateTopics_enable']))
+			foreach ($context['topics'] as $t)
+			{
+				$pt = new PrivateTopics($t['id']);
+				$ptArray = $pt->doGet();
+				$ptTools = $pt->doTools();
+				$ptBoard = $pt->doBoard($board);
+				$ptPermissionsSee = $pt->doPermissionsSee();
 
-	/* PrivateTopics mod */
-	foreach ($context['boards'] as $b)
-		if (!allowedTo('can_always_see_private_topics') && $user_info['id'] != $b['last_post']['member']['id'])
-			$b['last_post'] = array();
-	/* PrivateTopics mod */]]></add>
+				if ($ptPermissionsSee == false && is_array($ptArray))
+					if ($ptBoard && !in_array($user_info['id'], $ptArray))
+						unset($context['topics'][$t['id']]);
+			}
+		/* PrivateTopics mod */
+
+		// Fix the sequence of topics if they were retrieved in the wrong order. (for speed reasons...)]]></add>
 		</operation>
 	</file>
 

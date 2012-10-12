@@ -73,7 +73,7 @@ class PrivateTopics
 		);
 	}
 
-	public function doUpdate($params)
+	public function doUpdate()
 	{
 		global $smcFunc;
 
