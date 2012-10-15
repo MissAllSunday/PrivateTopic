@@ -271,7 +271,7 @@
 			<add><![CDATA[$context['categories'] = getBoardIndex($boardIndexOptions);
 
 	/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
+	if (!empty($modSettings['PrivateTopics_enable']) && !empty($context['categories']))
 		foreach ($context['categories'] as $c)
 			foreach ($c['boards'] as $b)
 			{
@@ -302,17 +302,18 @@
 				/* We do the same for children boards */
 				if (!empty($b['children']))
 					foreach ($b['children'] as $ch)
-					{
-						$pt = new PrivateTopics($ch['last_post']['topic']);
-						$ptArray = $pt->doGet();
-						$ptTools = $pt->doTools();
-						$ptBoard = $pt->doBoard($ch['id']);
-						$ptPermissionsSee = $pt->doPermissionsSee();
+						if(!empty($ch['last_post']['topic']))
+						{
+							$pt = new PrivateTopics($ch['last_post']['topic']);
+							$ptArray = $pt->doGet();
+							$ptTools = $pt->doTools();
+							$ptBoard = $pt->doBoard($ch['id']);
+							$ptPermissionsSee = $pt->doPermissionsSee();
 
-						if ($ptPermissionsSee == false && is_array($ptArray))
-							if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($ch['id'], $ptBoard))
-								unset($context['categories'][$c['id']]['boards'][$b['id']]['children'][$ch['id']]);
-					}
+							if ($ptPermissionsSee == false && is_array($ptArray))
+								if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($ch['id'], $ptBoard))
+									unset($context['categories'][$c['id']]['boards'][$b['id']]['children'][$ch['id']]);
+						}
 			}
 	/* PrivateTopics mod */]]></add>
 		</operation>
