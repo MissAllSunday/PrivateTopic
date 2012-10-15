@@ -78,6 +78,9 @@ class PrivateTopics
 	{
 		global $smcFunc;
 
+		/* Update the cache for this entry */
+		cache_put_data(self::$name .':'. $this->_topic, '', 120);
+
 		$smcFunc['db_query']('', '
 			UPDATE {db_prefix}private_topics
 			SET users = {string:users}
