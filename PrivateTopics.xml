@@ -147,7 +147,7 @@
 		$ptBoard = $pt->doBoard($board);
 		$ptCanSet = $pt->doPermissionsSet();
 
-		if (!empty($modSettings['PrivateTopics_enable']) && !empty($ptBoard) && $ptCanSet)
+		if (!empty($modSettings['PrivateTopics_enable']) && !empty($ptBoard) && $ptCanSet && is_array($ptArray))
 		{
 			$context['ptenable'] = $ptArray != 'no';
 			$context['ptusers'] = implode(',', $ptArray);

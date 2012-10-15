@@ -35,6 +35,7 @@ class PrivateTopics
 	private $_users;
 	private $_request;
 	private $_board;
+	public static $name = 'PrivateTopics';
 
 	public function __construct($topic = false,  $users = false)
 	{
@@ -94,25 +95,32 @@ class PrivateTopics
 
 		$this->unsetRequest();
 
-		$this->_request = $smcFunc['db_query']('', '
-			SELECT users, topic_id
-			FROM {db_prefix}private_topics
-			WHERE topic_id = {int:topic}
-			LIMIT 1',
-			array(
-				'topic' => $this->_topic,
-			)
-		);
+		/* Use the cache when possible */
+		if (($this->_return = cache_get_data(self::$name .':'. $this->_topic, 120)) == null)
+		{
+			$this->_request = $smcFunc['db_query']('', '
+				SELECT users, topic_id
+				FROM {db_prefix}private_topics
+				WHERE topic_id = {int:topic}
+				LIMIT 1',
+				array(
+					'topic' => $this->_topic,
+				)
+			);
 
-		$temp = $smcFunc['db_fetch_assoc']($this->_request);
+			$temp = $smcFunc['db_fetch_assoc']($this->_request);
 
-		if (!empty($temp))
-			$this->_return = explode(',', $temp['users']);
+			if (!empty($temp))
+				$this->_return = explode(',', $temp['users']);
 
-		else
-			$this->_return = 'no';
+			else
+				$this->_return = 'no';
 
-		$smcFunc['db_free_result']($this->_request);
+				/* Cache this beauty */
+				cache_put_data(self::$name .':'. $this->_topic, $this->_return, 120);
+
+			$smcFunc['db_free_result']($this->_request);
+		}
 
 		return $this->_return;
 	}
