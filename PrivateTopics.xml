@@ -320,49 +320,22 @@
 
 	<file name="$sourcedir/MessageIndex.php">
 		<operation>
-			<search position="replace"><![CDATA[// If there are children, but no topics and no ability to post topics...]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-	foreach ($context['boards'] as $b)
-		if (!empty($b['last_post']))
-		{
-			$pt = new PrivateTopics($b['last_post']['topic']);
-			$ptArray = $pt->doGet();
-			$ptTools = $pt->doTools();
-			$ptBoard = $pt->doBoard($b['id']);
-			$ptPermissionsSee = $pt->doPermissionsSee();
-
-			if ($ptPermissionsSee == false && is_array($ptArray))
-				if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($b['id'], $ptBoard))
-				{
-					unset($context['boards'][$b['id']]['last_post']);
-					unset($context['boards'][$b['id']]['topics']);
-					unset($context['boards'][$b['id']]['posts']);
-				}
-		}
-	/* PrivateTopics mod */
-
-	// If there are children, but no topics and no ability to post topics...]]></add>
+			<search position="replace"><![CDATA[t.id_topic, t.num_replies, t.locked, t.num_views, t.is_sticky, t.id_poll, t.id_previous_board,]]></search>
+			<add><![CDATA[t.id_topic, t.num_replies, t.locked, t.num_views, t.is_sticky, t.id_poll, t.id_previous_board, pt.topic_id, pt.users,]]></add>
 		</operation>
 
 		<operation>
-			<search position="replace"><![CDATA[// Fix the sequence of topics if they were retrieved in the wrong order. (for speed reasons...)]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-		if (!empty($modSettings['PrivateTopics_enable']))
-			foreach ($context['topics'] as $t)
-			{
-				$pt = new PrivateTopics($t['id']);
-				$ptArray = $pt->doGet();
-				$ptTools = $pt->doTools();
-				$ptBoard = $pt->doBoard($board);
-				$ptPermissionsSee = $pt->doPermissionsSee();
-
-				if ($ptPermissionsSee == false && is_array($ptArray))
-					if ($ptBoard && !in_array($user_info['id'], $ptArray))
-						unset($context['topics'][$t['id']]);
-			}
-		/* PrivateTopics mod */
-
-		// Fix the sequence of topics if they were retrieved in the wrong order. (for speed reasons...)]]></add>
+			<search position="replace"><![CDATA[LEFT JOIN {db_prefix}members AS meml ON (meml.id_member = ml.id_member)
+				LEFT JOIN {db_prefix}members AS memf ON (memf.id_member = mf.id_member)]]></search>
+			<add><![CDATA[LEFT JOIN {db_prefix}members AS meml ON (meml.id_member = ml.id_member)
+				LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
+				LEFT JOIN {db_prefix}members AS memf ON (memf.id_member = mf.id_member)]]></add>
+		</operation>
+		
+		<operation>
+			<search position="replace"><![CDATA[ORDER BY ' . ($pre_query ? 'FIND_IN_SET(t.id_topic, {string:find_set_topics})' : (!empty($modSettings['enableStickyTopics']) ?]]></search>
+			<add><![CDATA['. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
+			ORDER BY ' . ($pre_query ? 'FIND_IN_SET(t.id_topic, {string:find_set_topics})' : (!empty($modSettings['enableStickyTopics']) ? ]]></add>
 		</operation>
 	</file>
 
