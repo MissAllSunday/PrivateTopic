@@ -28,44 +28,26 @@
 
 	<file name="$sourcedir/Profile-View.php">
 		<operation>
-			<search position="replace"><![CDATA[// Do the code.
-		$row['body'] = parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']);
-
-		// And the array...
-		$context['posts'][$counter += $reverse ? -1 : 1] = array(
-			'body' => $row['body'],]]></search>
-			<add><![CDATA[// Do the code.
-		$row['body'] = parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']);
-
-		/* PrivateTopics mod */
-		if (!empty($modSettings['PrivateTopics_enable']))
-		{
-			$pt = new PrivateTopics($row['id_topic']);
-			$ptTools = $pt->doTools();
-			$ptBoard = $pt->doBoard($row['id_board']);
-			$ptTrue = false;
-			$ptArray = array();
-			$ptPermissionsSee = $pt->doPermissionsSee();
-
-			if (($ptCache = cache_get_data('PrivateTopics:'. $row['id_topic'] .'', 120)) == null)
-			{
-				$ptCache = $pt->doGet();
-
-				cache_put_data('PrivateTopics:'. $row['id_topic'] .'', $ptCache , 120);
-			}
-
-			if (!empty($ptCache) && is_array($ptCache) && $ptPermissionsSee == false)
-				if (!in_array($user_info['id'], $ptCache))
-					$ptTrue = true;
-		}
-
-		else
-			$ptTrue = false;
-		/* PrivateTopics mod */
-
-		// And the array...
-		$context['posts'][$counter += $reverse ? -1 : 1] = array(
-			'body' => $ptTrue ? $ptTools->getText('redirect_message') : $row['body'],]]></add>
+			<search position="replace"><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg,]]></search>
+			<add><![CDATA[]]></add>
+		</operation>
+		<operation>
+			<search position="replace"><![CDATA[LEFT JOIN {db_prefix}categories AS c ON (c.id_cat = b.id_cat)
+				WHERE m.id_member = {int:current_member}' . (!empty($board) ? '
+					AND b.id_board = {int:board}' : '') . (empty($range_limit) ? '' : '
+					AND ' . $range_limit) . '
+					AND {query_see_board}' . (!$modSettings['postmod_active'] || $context['user']['is_owner'] ? '' : '
+					AND t.approved = {int:is_approved} AND m.approved = {int:is_approved}') . '
+				ORDER BY m.id_msg ' . ($reverse ? 'ASC' : 'DESC') . ']]></search>
+			<add><![CDATA[LEFT JOIN {db_prefix}categories AS c ON (c.id_cat = b.id_cat)
+					LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
+				WHERE m.id_member = {int:current_member}' . (!empty($board) ? '
+					AND b.id_board = {int:board}' : '') . (empty($range_limit) ? '' : '
+					AND ' . $range_limit) . '
+					AND {query_see_board}' . (!$modSettings['postmod_active'] || $context['user']['is_owner'] ? '' : '
+					AND t.approved = {int:is_approved} AND m.approved = {int:is_approved}') . '
+					'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
+				ORDER BY m.id_msg ' . ($reverse ? 'ASC' : 'DESC') . ']]></add>
 		</operation>
 	</file>
 
@@ -93,38 +75,66 @@
 
 	<file name="$sourcedir/Recent.php">
 		<operation>
-			<search position="replace"><![CDATA[// And build the array.]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-		if (!empty($modSettings['PrivateTopics_enable']))
-		{
-			$pt = new PrivateTopics($row['id_topic']);
-			$ptTools = $pt->doTools();
-			$ptBoard = $pt->doBoard($row['id_board']);
-			$ptTrue = false;
-			$ptArray = array();
-
-			if (($ptCache = cache_get_data('PrivateTopics:'. $row['id_topic'] .'', 120)) == null)
-			{
-				$ptCache = $pt->doGet();
-
-				cache_put_data('PrivateTopics:'. $row['id_topic'] .'', $ptCache , 120);
-			}
-
-			if (!empty($ptCache) && is_array($ptCache))
-				if (!in_array($user_info['id'], $ptCache))
-					$ptTrue = true;
-		}
-
-		else
-			$ptTrue = false;
-		/* PrivateTopics mod */
-
-		// And build the array.]]></add>
+			<search position="replace"><![CDATA[m.id_msg, m.subject, m.smileys_enabled, m.poster_time, m.body, m.id_topic, t.id_board, b.id_cat,]]></search>
+			<add><![CDATA[m.id_msg, m.subject, m.smileys_enabled, m.poster_time, m.body, m.id_topic, t.id_board, b.id_cat, pt.topic_id, pt.users,]]></add>
 		</operation>
 
 		<operation>
-			<search position="replace"><![CDATA['message' => $row['body'],]]></search>
-			<add><![CDATA['message' => $ptTrue ? $ptTools->getText('redirect_message') : $row['body'],]]></add>
+			<search position="replace"><![CDATA[WHERE m.id_msg IN ({array_int:message_list})]]></search>
+			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
+		WHERE m.id_msg IN ({array_int:message_list})
+			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+		</operation>
+	</file>
+
+	<file name="$sourcedir/Subs-BoardIndex.php">
+		<operation>
+			<search position="replace"><![CDATA[return $boardIndexOptions['include_categories'] ? $categories : $this_category;]]></search>
+			<add><![CDATA[/* PrivateTopics mod */
+		$ptTrue = false;
+
+		if (!empty($modSettings['PrivateTopics_enable']) && !empty($context['latest_post']['topic']))
+		{
+			$pt = new PrivateTopics($context['latest_post']['topic']);
+			$ptCache = $pt->doGet();
+
+			if (!empty($ptCache) && is_array($ptCache))
+				if (!in_array($user_info['id'], $ptCache))
+					$context['latest_post'] = array();
+		}
+		/* PrivateTopics mod */
+
+	return $boardIndexOptions['include_categories'] ? $categories : $this_category;]]></add>
+		</operation>
+	</file>
+
+	<file name="$sourcedir/Subs-Recent.php">
+		<operation>
+			<search position="replace"><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg,]]></search>
+			<add><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg, pt.topic_id, pt.users,]]></add>
+		</operation>
+		<operation>
+			<search position="replace"><![CDATA[WHERE m.id_msg >= {int:likely_max_msg}]]></search>
+			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
+		WHERE m.id_msg >= {int:likely_max_msg}
+			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+		</operation>
+	</file>
+
+	<file name="$sourcedir/Search.php">
+		<operation>
+			<search position="replace"><![CDATA[m.id_msg, m.subject, m.poster_name, m.poster_email, m.poster_time, m.id_member,]]></search>
+			<add><![CDATA[m.id_msg, m.subject, m.poster_name, m.poster_email, m.poster_time, m.id_member, pt.topic_id, pt.users,]]></add>
+		</operation>
+		<operation>
+			<search position="replace"><![CDATA[WHERE m.id_msg IN ({array_int:message_list})' . ($modSettings['postmod_active'] ? '
+				AND m.approved = {int:is_approved}' : '') . '
+			ORDER BY FIND_IN_SET(m.id_msg, {string:message_list_in_set})]]></search>
+			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
+			WHERE m.id_msg IN ({array_int:message_list})' . ($modSettings['postmod_active'] ? '
+				AND m.approved = {int:is_approved}' : '') . '
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
+			ORDER BY FIND_IN_SET(m.id_msg, {string:message_list_in_set})]]></add>
 		</operation>
 	</file>
 
