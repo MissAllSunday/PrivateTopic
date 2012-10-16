@@ -227,8 +227,9 @@ class PrivateTopics
 		require_once($sourcedir . '/ManageServer.php');
 
 		$config_vars = array(
-			array('check', 'PrivateTopics_enable', 'subtext' => $tools->getText('enable_sub')),
-			array('text', 'PrivateTopics_boards', 'size' => 10, 'subtext' => $tools->getText('boards_sub')),
+			array('check', self::$name .'_enable', 'subtext' => $tools->getText('enable_sub')),
+			array('text', self::$name .'_boards', 'size' => 10, 'subtext' => $tools->getText('boards_sub')),
+			array('text', self::$name .'_boardindex_message', 'size' => 70, 'subtext' => $tools->getText('boardindex_message_sub')),
 
 		);
 

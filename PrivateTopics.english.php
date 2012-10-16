@@ -28,6 +28,9 @@
 
 global $txt;
 
+/* Board and MessageIndex strings */
+$txt['PrivateTopics_boardindex_message_default'] = 'Topic preview unavailable';
+
 $txt['PrivateTopics_title'] = 'Private Topics';
 $txt['PrivateTopics_settings'] = 'Settings';
 $txt['PrivateTopics_panel_desc'] = 'From Here you can set up the Private Topics Settings';
@@ -37,6 +40,8 @@ $txt['PrivateTopics_boards'] = 'Put the Board IDs where you want to use topics a
 $txt['PrivateTopics_boards_sub'] = 'Comma separate, for example: 1,2,3,4';
 $txt['PrivateTopics_redirect'] = 'I\'m sorry, you aren\'t allowed to see this topic.';
 $txt['PrivateTopics_redirect_message'] = 'This message belongs to a private topic.';
+$txt['PrivateTopics_boardindex_message'] = 'Set a custom text for the Board and MessageIndex last topic cell';
+$txt['PrivateTopics_boardindex_message_sub'] = 'When the last topic of a board marked as a private board is a private topic, the mod will hide that las topic from the board and MessageIndex and instead will put a text, you can set a custom text to appear on that place, if left empty, the mod will use the default text: '. $txt['PrivateTopics_boardindex_message_default'];
 /* $txt['PrivateTopics_'] = ''; */
 
 /* Permissions strings */

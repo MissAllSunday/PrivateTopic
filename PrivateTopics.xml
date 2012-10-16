@@ -424,4 +424,49 @@ suggestMember();
 // The template for the spellchecker.]]></add>
 		</operation>
 	</file>
+
+	<file name="$themedir/BoardIndex.template.php">
+		<operation>
+			<search position="replace"><![CDATA[if (!empty($board['last_post']['id']))
+					echo '
+						<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'] , '<br />
+						', $txt['in'], ' ', $board['last_post']['link'], '<br />
+						', $txt['on'], ' ', $board['last_post']['time'],'
+						</p>';]]></search>
+			<add><![CDATA[if (!empty($board['last_post']['id']))
+					echo '
+						<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'] , '<br />
+						', $txt['in'], ' ', $board['last_post']['link'], '<br />
+						', $txt['on'], ' ', $board['last_post']['time'],'
+						</p>';
+
+				/* If this is empty and the private topic mod is enable, then its the mods fault */
+				elseif (!empty($modSettings['PrivateTopics_enable']) && empty($board['last_post']['id']))
+					echo '
+						<p>', !empty($modSettings['PrivateTopics_boardindex_message']) ? $modSettings['PrivateTopics_boardindex_message'] : PrivateTopics::doTools()->getText('boardindex_message_default') ,'</p>';]]></add>
+		</operation>
+	</file>
+
+	<file name="$themedir/MessageIndex.template.php">
+		<operation>
+			<search position="replace"><![CDATA[if (!empty($board['last_post']['id']))
+				echo '
+						<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
+						', $txt['in'], ' ', $board['last_post']['link'], '<br />
+						', $txt['on'], ' ', $board['last_post']['time'],'
+						</p>';]]></search>
+			<add><![CDATA[if (!empty($board['last_post']['id']))
+				echo '
+						<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
+						', $txt['in'], ' ', $board['last_post']['link'], '<br />
+						', $txt['on'], ' ', $board['last_post']['time'],'
+						</p>';
+
+			/* If this is empty and the private topic mod is enable, then its the mods fault */
+			elseif (!empty($modSettings['PrivateTopics_enable']) && empty($board['last_post']['id']))
+				echo '
+					<p>', !empty($modSettings['PrivateTopics_boardindex_message']) ? $modSettings['PrivateTopics_boardindex_message'] : PrivateTopics::doTools()->getText('boardindex_message_default') ,'</p>';]]></add>
+		</operation>
+	</file>
+
 </modification>
