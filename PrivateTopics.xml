@@ -484,7 +484,7 @@ suggestMember();
 		<operation>
 			<search position="replace"><![CDATA[' . (empty($query_where) ? '' : 'WHERE ' . $query_where) . ']]></search>
 			<add><![CDATA[' . (empty($query_where) ? '' : 'WHERE ' . $query_where) . '
-		'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? .(empty($query_where) ? 'WHERE' : 'AND').' (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+		'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? (empty($query_where) ? 'WHERE' : 'AND').' (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
 		</operation>
 
 		<operation>
@@ -496,8 +496,7 @@ suggestMember();
 			<search position="replace"><![CDATA[WHERE t.id_last_msg >= {int:min_message_id}]]></search>
 			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
 		WHERE t.id_last_msg >= {int:min_message_id}
-			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
-			' . (empty($exclude_boards) ? '' : ']]></add>
+			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
 		</operation>
 		<operation>
 			<search position="replace"><![CDATA[SELECT m.subject, m.id_topic, t.num_views, t.num_replies]]></search>
