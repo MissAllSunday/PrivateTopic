@@ -469,4 +469,51 @@ suggestMember();
 		</operation>
 	</file>
 
+	<file name="$boarddir/SSI.php">
+		<operation>
+			<search position="replace"><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg, m.id_board, b.name AS board_name,]]></search>
+			<add><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg, m.id_board, b.name AS board_name, pt.topic_id, pt.users,]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)]]></search>
+			<add><![CDATA[INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)
+			LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[' . (empty($query_where) ? '' : 'WHERE ' . $query_where) . ']]></search>
+			<add><![CDATA[' . (empty($query_where) ? '' : 'WHERE ' . $query_where) . '
+		'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? .(empty($query_where) ? 'WHERE' : 'AND').' (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[m.poster_time, ms.subject, m.id_topic, m.id_member, m.id_msg, b.id_board, b.name AS board_name, t.num_replies, t.num_views,]]></search>
+			<add><![CDATA[m.poster_time, ms.subject, m.id_topic, m.id_member, m.id_msg, b.id_board, b.name AS board_name, t.num_replies, t.num_views, pt.topic_id, pt.users,]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[WHERE t.id_last_msg >= {int:min_message_id}]]></search>
+			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
+		WHERE t.id_last_msg >= {int:min_message_id}
+			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
+			' . (empty($exclude_boards) ? '' : ']]></add>
+		</operation>
+		<operation>
+			<search position="replace"><![CDATA[SELECT m.subject, m.id_topic, t.num_views, t.num_replies]]></search>
+			<add><![CDATA[SELECT m.subject, m.id_topic, t.num_views, t.num_replies, pt.topic_id, pt.users]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[WHERE {query_wanna_see_board}' . ($modSettings['postmod_active'] ? ']]></search>
+			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic
+		WHERE {query_wanna_see_board}' . ($modSettings['postmod_active'] ? ']]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[ORDER BY t.num_' . ($type != 'replies' ? 'views' : 'replies') . ' DESC]]></search>
+			<add><![CDATA['. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
+		ORDER BY t.num_' . ($type != 'replies' ? 'views' : 'replies') . ' DESC]]></add>
+		</operation>
+	</file>
 </modification>
