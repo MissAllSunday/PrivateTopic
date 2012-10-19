@@ -26,10 +26,40 @@
 		</operation>
 	</file>
 
+	<file name="$sourcedir/Who.php">
+		<operation>
+			<search position="replace"><![CDATA[// Show the topic's subject for each of the actions.
+			foreach ($topic_ids[$row['id_topic']] as $k => $session_text)
+				$data[$k] = sprintf($session_text, $row['id_topic'], censorText($row['subject']));]]></search>
+			<add><![CDATA[// Show the topic's subject for each of the actions.
+			foreach ($topic_ids[$row['id_topic']] as $k => $session_text)
+			{
+				/* PrivateTopics mod */
+				if (!empty($modSettings['PrivateTopics_enable']))
+				{
+					$pt = new PrivateTopics($row['id_topic']);
+					$ptArray = $pt->doGet();
+					$ptTools = $pt->doTools();
+					$ptPermissionsSee = $pt->doPermissionsSee();
+
+					if ($ptPermissionsSee == false && is_array($ptArray))
+						if (!in_array($user_info['id'], $ptArray))
+							unset($data[$k]);
+
+					else
+						$data[$k] = sprintf($session_text, $row['id_topic'], censorText($row['subject']));
+				}
+
+				else
+					$data[$k] = sprintf($session_text, $row['id_topic'], censorText($row['subject']));
+			}]]></add>
+		</operation>
+	</file>
+
 	<file name="$sourcedir/Profile-View.php">
 		<operation>
 			<search position="replace"><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg,]]></search>
-			<add><![CDATA[]]></add>
+			<add><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg, pt.topic_id, pt.users,]]></add>
 		</operation>
 		<operation>
 			<search position="replace"><![CDATA[LEFT JOIN {db_prefix}categories AS c ON (c.id_cat = b.id_cat)
@@ -140,20 +170,51 @@
 
 	<file name="$sourcedir/Post.php">
 		<operation>
-			<search position="after"><![CDATA[// Set the destinaton.]]></search>
-			<add><![CDATA[$pt = new PrivateTopics($topic);
+			<search position="after"><![CDATA[// Check if it's locked.  It isn't locked if no topic is specified.]]></search>
+			<add><![CDATA[/* PrivateTopics mod */
+	if (!empty($modSettings['PrivateTopics_enable']) && !empty($topic) && !empty($board))
+	{
+		$pt = new PrivateTopics($topic);
 		$ptArray = $pt->doGet();
 		$ptTools = $pt->doTools();
 		$ptBoard = $pt->doBoard($board);
-		$ptCanSet = $pt->doPermissionsSet();
+		$ptPermissionsSee = $pt->doPermissionsSee();
 
-		if (!empty($modSettings['PrivateTopics_enable']) && !empty($ptBoard) && $ptCanSet && is_array($ptArray))
+		if ($ptPermissionsSee == false && is_array($ptArray))
+			if ($ptBoard && !in_array($user_info['id'], $ptArray))
+				fatal_lang_error('PrivateTopics_redirect', false);
+	}
+	/* PrivateTopics mod */
+
+	// Check if it's locked.  It isn't locked if no topic is specified.]]></add>
+		</operation>
+		<operation>
+			<search position="replace"><![CDATA[// Set the destinaton.]]></search>
+			<add><![CDATA[/* PrivateTopics mod */
+		if (!empty($topic) && !empty($modSettings['PrivateTopics_enable']))
 		{
-			$context['ptenable'] = $ptArray != 'no';
-			$context['ptusers'] = implode(',', $ptArray);
+				$pt = new PrivateTopics($topic);
+				$ptArray = $pt->doGet();
+				$ptTools = $pt->doTools();
+				$ptBoard = $pt->doBoard($board);
+				$ptCanSet = $pt->doPermissionsSet();
+
+				if (!empty($ptBoard) && $ptCanSet && is_array($ptArray))
+				{
+					$context['ptenable'] = $ptArray != 'no';
+					$context['ptusers'] = implode(',', $ptArray);
+				}
 		}
 
-		]]></add>
+		else
+		{
+			$context['ptenable'] = false;
+			$context['ptusers'] = array();
+
+		}
+		/* PrivateTopics mod */
+
+		// Set the destinaton.]]></add>
 		</operation>
 		<operation>
 			<search position="replace"><![CDATA[// This is an already existing message. Edit it.]]></search>
