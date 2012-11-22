@@ -332,7 +332,7 @@
 		<operation>
 			<search position="replace"><![CDATA[modifyPost($msgOptions, $topicOptions, $posterOptions);]]></search>
 			<add><![CDATA[if ($ptsave)
-			$pt->doUpdate();
+			$pt->doUpdate($topicOptions['id']);
 
 		modifyPost($msgOptions, $topicOptions, $posterOptions);]]></add>
 		</operation>
