@@ -143,6 +143,13 @@
 		</operation>
 
 		<operation>
+			<search position="replace"><![CDATA[WHERE t.' . $query_this_board . ']]></search>
+			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
+			WHERE t.' . $query_this_board . '
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+		</operation>
+
+		<operation>
 			<search position="replace"><![CDATA[WHERE t.' . $query_this_board . ($context['showing_all_topics'] && !empty($earliest_msg) ? '
 				AND t.id_last_msg > {int:earliest_msg}' : (!$context['showing_all_topics'] && empty($_SESSION['first_login']) ? '
 				AND t.id_last_msg > {int:id_msg_last_visit}' : '')) . ']]></search>
