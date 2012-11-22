@@ -331,7 +331,8 @@
 
 		<operation>
 			<search position="replace"><![CDATA[modifyPost($msgOptions, $topicOptions, $posterOptions);]]></search>
-			<add><![CDATA[if ($ptsave)
+			<add><![CDATA[/* Only update if there is a previous record */
+		if ($ptsave && $pt->doGet() != 'no')
 			$pt->doUpdate($topicOptions['id']);
 
 		modifyPost($msgOptions, $topicOptions, $posterOptions);]]></add>

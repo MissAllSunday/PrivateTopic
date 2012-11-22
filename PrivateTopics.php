@@ -79,14 +79,14 @@ class PrivateTopics
 		global $smcFunc;
 
 		/* Update the cache for this entry */
-		cache_put_data(self::$name .':'. !empty($this->_topic) ? $this->_topic : $id, '', 120);
+		cache_put_data(self::$name .':'. $id, '', 120);
 
 		$smcFunc['db_query']('', '
 			UPDATE {db_prefix}private_topics
 			SET users = {string:users}
 			WHERE topic_id = {int:topic_id}',
 			array(
-				'topic_id' => !empty($this->_topic) ? $this->_topic : $id,
+				'topic_id' => $id,
 				'users' => $this->_users
 			)
 		);
