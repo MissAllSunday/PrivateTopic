@@ -307,12 +307,17 @@
 			$ptusers = implode(',', $ptuserstemp2);
 		}
 
-		/* Let's send a pm to every member we dont' need to to send the pm to the topic author */
+		/* If there was no users, then use the topic starter */
+		else
+			$ptusers = array($user_info['id']);
+
+		/* Let's send a pm to every member, we dont' need to to send the pm to the topic author */
 		$pmToSend = array();
 
-		foreach ($ptuserstemp2 as $uk => $uv)
-			if ($uv != $user_info['id'])
-				$pmToSend[] = $uv;
+		if (!empty($ptuserstemp2))
+			foreach ($ptuserstemp2 as $uk => $uv)
+				if ($uv != $user_info['id'])
+					$pmToSend[] = $uv;
 
 		$pt = new PrivateTopics($topicOptions['id'], $ptusers);
 		$ptBoard = $pt->doBoard($topicOptions['board']);
@@ -343,22 +348,25 @@
 			$pt->doSave($topic);
 
 			/* Send the pm */
-			global $scripturl;
+			if (!empty($pmToSend))
+			{
+				global $scripturl;
 
-			$recipients = array(
-				'bcc' => array(),
-				'to' => $pmToSend
-			);
-			$from = array(
-					'id' => $user_info['id'],
-					'name' => $user_info['name'],
-					'username' => $user_info['username'],
+				$recipients = array(
+					'bcc' => array(),
+					'to' => $pmToSend
 				);
-			$ptTopicUrl = $scripturl . '?topic=' . $topic . '.0';
-			$ptUserSend = $user_info['username'];
-			$ptMessage = sprintf($ptTools->getText('pm_message'), $ptTopicUrl, $ptUserSend);
+				$from = array(
+						'id' => $user_info['id'],
+						'name' => $user_info['name'],
+						'username' => $user_info['username'],
+					);
+				$ptTopicUrl = $scripturl . '?topic=' . $topic . '.0';
+				$ptUserSend = $user_info['username'];
+				$ptMessage = sprintf($ptTools->getText('pm_message'), $ptTopicUrl, $ptUserSend);
 
-			sendpm($recipients, $ptTools->getText('pm_subject'), $ptMessage, false, $from);
+				sendpm($recipients, $ptTools->getText('pm_subject'), $ptMessage, false, $from);
+			}
 		}]]></add>
 		</operation>
 	</file>
