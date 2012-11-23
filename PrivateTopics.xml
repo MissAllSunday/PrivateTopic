@@ -159,6 +159,13 @@
 				AND t.id_last_msg > {int:id_msg_last_visit}' : '')) . '
 				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
 		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[WHERE t.id_topic IN ({array_int:topic_list})]]></search>
+			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
+			WHERE t.id_topic IN ({array_int:topic_list})
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+		</operation>
 	</file>
 
 	<file name="$sourcedir/Subs-BoardIndex.php">
