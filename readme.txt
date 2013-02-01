@@ -1,7 +1,7 @@
 [center][size=14pt][color=purple]Private topics mod[/color][/size]
 by: [url=http://missallsunday.com]Suki[/url][/center]
 
-[color=purple][b][size=12pt]License[/size][/b][/color]
+[color=purple][size=12pt]License[/size][/color]
 
 [code]
 /*
@@ -22,6 +22,8 @@ by: [url=http://missallsunday.com]Suki[/url][/center]
 [size=12pt][color=purple]Description[/color][/size]
 
 Allows users with permissions to mark topics as private and invite people to it, the mod also has a permission to see all topics marked as private without the need to be invited.
+
+This mod only covers a vanilla SMF installation, if you have mods that adds their own queries to fetch topics then you need to manually apply the appropiate check to that code.
 
 [b]for SMF 2.0.x only [/b]
 
