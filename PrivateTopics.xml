@@ -534,16 +534,41 @@ suggestMember();
 						', $txt['on'], ' ', $board['last_post']['time'],'
 						</p>';]]></search>
 			<add><![CDATA[if (!empty($board['last_post']['id']))
-					echo '
-						<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'] , '<br />
+					if (!empty($modSettings['PrivateTopics_enable']))
+					{
+						global $user_info;
+						$ptTrue = false;
+						$pt = new PrivateTopics($board['last_post']['id']);
+						$ptCache = $pt->doGet();
+
+						if (!empty($ptCache) && is_array($ptCache) && !allowedTo('can_always_see_private_topics'))
+						{
+							if (!in_array($user_info['id'], $ptCache))
+								echo '
+							<p>', !empty($modSettings['PrivateTopics_boardindex_message']) ? $modSettings['PrivateTopics_boardindex_message'] : PrivateTopics::doTools()->getText('boardindex_message_default') ,'</p>';
+
+							else
+								echo '
+								<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
+								', $txt['in'], ' ', $board['last_post']['link'], '<br />
+								', $txt['on'], ' ', $board['last_post']['time'],'
+								</p>';
+						}
+
+						else
+							echo '
+							<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
+							', $txt['in'], ' ', $board['last_post']['link'], '<br />
+							', $txt['on'], ' ', $board['last_post']['time'],'
+							</p>';
+					}
+
+					else
+						echo '
+						<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
 						', $txt['in'], ' ', $board['last_post']['link'], '<br />
 						', $txt['on'], ' ', $board['last_post']['time'],'
-						</p>';
-
-				/* If this is empty and the private topic mod is enable, then its the mods fault */
-				elseif (!empty($modSettings['PrivateTopics_enable']) && empty($board['last_post']['id']))
-					echo '
-						<p>', !empty($modSettings['PrivateTopics_boardindex_message']) ? $modSettings['PrivateTopics_boardindex_message'] : PrivateTopics::doTools()->getText('boardindex_message_default') ,'</p>';]]></add>
+						</p>';]]></add>
 		</operation>
 	</file>
 
@@ -556,16 +581,41 @@ suggestMember();
 						', $txt['on'], ' ', $board['last_post']['time'],'
 						</p>';]]></search>
 			<add><![CDATA[if (!empty($board['last_post']['id']))
-				echo '
+					if (!empty($modSettings['PrivateTopics_enable']))
+					{
+						global $user_info;
+						$ptTrue = false;
+						$pt = new PrivateTopics($board['last_post']['id']);
+						$ptCache = $pt->doGet();
+
+						if (!empty($ptCache) && is_array($ptCache) && !allowedTo('can_always_see_private_topics'))
+						{
+							if (!in_array($user_info['id'], $ptCache))
+								echo '
+							<p>', !empty($modSettings['PrivateTopics_boardindex_message']) ? $modSettings['PrivateTopics_boardindex_message'] : PrivateTopics::doTools()->getText('boardindex_message_default') ,'</p>';
+
+							else
+								echo '
+								<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
+								', $txt['in'], ' ', $board['last_post']['link'], '<br />
+								', $txt['on'], ' ', $board['last_post']['time'],'
+								</p>';
+						}
+
+						else
+							echo '
+							<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
+							', $txt['in'], ' ', $board['last_post']['link'], '<br />
+							', $txt['on'], ' ', $board['last_post']['time'],'
+							</p>';
+					}
+
+					else
+						echo '
 						<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
 						', $txt['in'], ' ', $board['last_post']['link'], '<br />
 						', $txt['on'], ' ', $board['last_post']['time'],'
-						</p>';
-
-			/* If this is empty and the private topic mod is enable, then its the mods fault */
-			elseif (!empty($modSettings['PrivateTopics_enable']) && empty($board['last_post']['id']))
-				echo '
-					<p>', !empty($modSettings['PrivateTopics_boardindex_message']) ? $modSettings['PrivateTopics_boardindex_message'] : PrivateTopics::doTools()->getText('boardindex_message_default') ,'</p>';]]></add>
+						</p>';]]></add>
 		</operation>
 	</file>
 
