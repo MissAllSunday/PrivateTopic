@@ -168,27 +168,6 @@
 		</operation>
 	</file>
 
-	<file name="$sourcedir/Subs-BoardIndex.php">
-		<operation>
-			<search position="replace"><![CDATA[return $boardIndexOptions['include_categories'] ? $categories : $this_category;]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-		$ptTrue = false;
-
-		if (!empty($modSettings['PrivateTopics_enable']) && !empty($context['latest_post']['topic']))
-		{
-			$pt = new PrivateTopics($context['latest_post']['topic']);
-			$ptCache = $pt->doGet();
-
-			if (!empty($ptCache) && is_array($ptCache))
-				if (!in_array($user_info['id'], $ptCache))
-					$context['latest_post'] = array();
-		}
-		/* PrivateTopics mod */
-
-	return $boardIndexOptions['include_categories'] ? $categories : $this_category;]]></add>
-		</operation>
-	</file>
-
 	<file name="$sourcedir/Subs-Recent.php">
 		<operation>
 			<search position="replace"><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg,]]></search>
