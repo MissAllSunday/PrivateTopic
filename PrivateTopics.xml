@@ -632,9 +632,9 @@ suggestMember();
 		</operation>
 
 		<operation>
-			<search position="replace"><![CDATA[' . (empty($query_where) ? '' : 'WHERE ' . $query_where) . ']]></search>
-			<add><![CDATA[' . (empty($query_where) ? '' : 'WHERE ' . $query_where) . '
-		'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? (empty($query_where) ? 'WHERE' : 'AND').' (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+			<search position="replace"><![CDATA[' . (empty($query_where) ? '' : 'AND ' . $query_where) . ']]></search>
+			<add><![CDATA[' . (empty($query_where) ? '' : 'AND ' . $query_where) . '
+		'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? (empty($query_where) ? '' : 'AND').' (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
 		</operation>
 
 		<operation>
