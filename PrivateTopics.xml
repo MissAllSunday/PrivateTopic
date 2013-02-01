@@ -655,7 +655,7 @@ suggestMember();
 
 		<operation>
 			<search position="replace"><![CDATA[WHERE {query_wanna_see_board}' . ($modSettings['postmod_active'] ? ']]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic
+			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
 		WHERE {query_wanna_see_board}' . ($modSettings['postmod_active'] ? ']]></add>
 		</operation>
 
