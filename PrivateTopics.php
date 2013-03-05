@@ -133,9 +133,14 @@ class PrivateTopics
 		global $sourcedir;
 
 		if(file_exists($sourcedir. '/PrivateTopicsTools.php'))
+		{
 			require_once($sourcedir. '/PrivateTopicsTools.php');
 
-		return PrivateTopicsTools::getInstance();
+			return PrivateTopicsTools::getInstance();
+		}
+
+		else
+			return false;
 	}
 
 	public function doBoard($board)
