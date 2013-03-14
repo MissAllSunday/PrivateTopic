@@ -58,6 +58,9 @@ class PrivateTopics
 	{
 		global $smcFunc;
 
+		if (empty($this->_users))
+			return;
+
 		$this->_topic = $topic;
 
 		$save = array();
@@ -96,11 +99,57 @@ class PrivateTopics
 		$this->doSave($id);
 	}
 
+	private function _updateCompatTopic()
+	{
+		global $smcFunc;
+		$request = $smcFunc['db_query']('', '
+			SELECT users
+			FROM {db_prefix}private_topics
+			WHERE topic_id = {int:topic}
+			LIMIT 1',
+			array(
+				'topic' => $this->_topic,
+			)
+		);
+		$result = $smcFunc['db_fetch_assoc']($request);
+		$smcFunc['db_free_result']($request);
+		$this->_users = empty($result['users']) ? array() : explode(',', $result['users']);
+		$this->doUpdate($this->_topic);
+
+		// Once in a while, let's check if we can remove the compatibility mode.
+// 		if (rand() < 0.05)
+		{
+			$request = $smcFunc['db_query']('', '
+				SELECT COUNT(*)
+				FROM {db_prefix}private_topics
+				WHERE users != {string:empty}',
+				array(
+					'empty' => '',
+				)
+			);
+			list($convert_remaining) = $smcFunc['db_fetch_row']($request);
+			_debug($convert_remaining);
+			$smcFunc['db_free_result']($request);
+			// YAY! Everything has been moved to the new system, so let's get rid of everything
+			if ($convert_remaining == 0)
+			{
+				db_extend('packages');
+				$smcFunc['db_remove_column']('{db_prefix}private_topics', 'users');
+				updateSettings(array(self::$name . '_compatibility' => 0));
+			}
+		}
+	}
+
 	public function doGet()
 	{
 		global $smcFunc;
 
 		$this->unsetRequest();
+
+		// This is for backward compatibility with previous versions
+		$tools = self::doTools();
+		if ($tools->getSetting('compatibility'))
+			$this->_updateCompatTopic();
 
 		/* Use the cache when possible */
 		if (($this->_return = cache_get_data(self::$name .':'. $this->_topic, 120)) == null)
