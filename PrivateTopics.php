@@ -99,57 +99,11 @@ class PrivateTopics
 		$this->doSave($id);
 	}
 
-	private function _updateCompatTopic()
-	{
-		global $smcFunc;
-		$request = $smcFunc['db_query']('', '
-			SELECT users
-			FROM {db_prefix}private_topics
-			WHERE topic_id = {int:topic}
-			LIMIT 1',
-			array(
-				'topic' => $this->_topic,
-			)
-		);
-		$result = $smcFunc['db_fetch_assoc']($request);
-		$smcFunc['db_free_result']($request);
-		$this->_users = empty($result['users']) ? array() : explode(',', $result['users']);
-		$this->doUpdate($this->_topic);
-
-		// Once in a while, let's check if we can remove the compatibility mode.
-// 		if (rand() < 0.05)
-		{
-			$request = $smcFunc['db_query']('', '
-				SELECT COUNT(*)
-				FROM {db_prefix}private_topics
-				WHERE users != {string:empty}',
-				array(
-					'empty' => '',
-				)
-			);
-			list($convert_remaining) = $smcFunc['db_fetch_row']($request);
-			_debug($convert_remaining);
-			$smcFunc['db_free_result']($request);
-			// YAY! Everything has been moved to the new system, so let's get rid of everything
-			if ($convert_remaining == 0)
-			{
-				db_extend('packages');
-				$smcFunc['db_remove_column']('{db_prefix}private_topics', 'users');
-				updateSettings(array(self::$name . '_compatibility' => 0));
-			}
-		}
-	}
-
 	public function doGet()
 	{
 		global $smcFunc;
 
 		$this->unsetRequest();
-
-		// This is for backward compatibility with previous versions
-		$tools = self::doTools();
-		if ($tools->getSetting('compatibility'))
-			$this->_updateCompatTopic();
 
 		/* Use the cache when possible */
 		if (($this->_return = cache_get_data(self::$name .':'. $this->_topic, 120)) == null)
@@ -255,7 +209,8 @@ class PrivateTopics
 		$context['page_title'] = $tools->getText('titles');
 
 		$subActions = array(
-			'basic' => 'PrivateTopics::settings'
+			'basic' => 'PrivateTopics::settings',
+			'maintenance' => 'PrivateTopics::maintenance'
 		);
 
 		loadGeneralSettingParameters($subActions, 'basic');
@@ -270,6 +225,93 @@ class PrivateTopics
 		);
 
 		call_user_func($subActions[$_REQUEST['sa']]);
+	}
+
+	public function doMaintenance()
+	{
+		global $smcFunc;
+		$request = $smcFunc['db_query']('', '
+			SELECT users
+			FROM {db_prefix}private_topics
+			WHERE topic_id = {int:topic}
+			LIMIT 1',
+			array(
+				'topic' => $this->_topic,
+			)
+		);
+		$result = $smcFunc['db_fetch_assoc']($request);
+		$smcFunc['db_free_result']($request);
+		$this->_users = empty($result['users']) ? array() : explode(',', $result['users']);
+		$this->doUpdate($this->_topic);
+	}
+
+	public static function maintenance($return_config = false)
+	{
+		global $smcFunc, $context, $maintenance, $modSettings, $db_prefix, $sourcedir;
+// $context['continue_get_data']
+// _updateCompatTopic
+
+		isAllowedTo('admin_forum');
+
+		db_extend('packages');
+		$table_name = str_replace('{db_prefix}', $db_prefix, '{db_prefix}private_topics');
+		$columns = $smcFunc['db_list_columns']($table_name, false);
+		loadTemplate('Admin');
+		$increment = 100;
+		$total = isset($_GET['total']) ? (int) $_GET['total'] : false;
+
+		foreach ($columns as $column)
+			// The column is there...let's do something
+			if ($column == 'users')
+			{
+				if ($total === false)
+				{
+					$request = $smcFunc['db_query']('', '
+						SELECT COUNT(*)
+						FROM {db_prefix}private_topics
+						WHERE users != {string:empty}',
+						array(
+							'empty' => ''
+						)
+					);
+					list($total) = $smcFunc['db_fetch_row']($request);
+					$smcFunc['db_free_result']($request);
+				}
+				$request = $smcFunc['db_query']('', '
+					SELECT users, topic_id
+					FROM {db_prefix}private_topics
+					WHERE users != {string:empty}
+					LIMIT {int:increment}',
+					array(
+						'empty' => '',
+						'increment' => $increment
+					)
+				);
+				if ($smcFunc['db_num_rows']($request) > 0)
+				{
+					while ($row = $smcFunc['db_fetch_assoc']($request))
+					{
+						$pt = new PrivateTopics($row['topic_id'], explode(',', $row['users']));
+						$pt->doMaintenance();
+					}
+					$smcFunc['db_free_result']($request);
+					// we have to break
+					$_GET['done'] = isset($_GET['done']) ? (int) $_GET['done'] : $increment;
+					$context['continue_get_data'] = '?action=admin;area=privatetopics;sa=maintenance;total=' . $total . ';done=' . $_GET['done'] . ';' . $context['session_var'] . '=' . $context['session_id'];
+					$context['page_title'] = $txt['not_done_title'];
+					$context['continue_countdown'] = '2';
+					$context['sub_template'] = 'not_done';
+					$context['continue_post_data'] = '';
+					$context['continue_percent'] = min(100, round($_GET['done'] / $total * 100));
+					return;
+				}
+			}
+
+		require_once($sourcedir . '/Subs-Admin.php');
+		$smcFunc['db_remove_column']('{db_prefix}private_topics', 'users');
+		updateSettingsFile(array('maintenance' => empty($modSettings['original_maintenance']) ? 0 : $modSettings['original_maintenance']));
+		updateSettings(array('original_maintenance' => 0));
+		redirectexit('action=admin;area=privatetopics');
 	}
 
 	public static function settings($return_config = false)

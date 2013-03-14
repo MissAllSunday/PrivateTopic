@@ -32,7 +32,7 @@
 	elseif (!defined('SMF'))
 		exit('<b>Error:</b> Cannot install - please verify you put this in the same place as SMF\'s index.php.');
 
-	global $smcFunc, $context, $db_prefix;
+	global $smcFunc, $context, $db_prefix, $sourcedir, $maintenance;
 
 	db_extend('packages');
 
@@ -98,12 +98,19 @@
 				// If the column already exists, let's do another couple of checks
 				if (!$addCol)
 				{
+					require_once($sourcedir . '/Subs-Admin.php');
+
 					$table_name = str_replace('{db_prefix}', $db_prefix, '{db_prefix}private_topics');
 					$columns = $smcFunc['db_list_columns']($table_name, false);
 					foreach ($columns as $column)
-						// That is, we are upgrading, so: compatibility mode
+						// That is, we are upgrading, so: maintenance mode until you run the maintenance
 						if ($column == 'users')
-							updateSettings(array('PrivateTopics_compatibility' => 1));
+						{
+							// Let's remember the current maintenance status
+							updateSettingsFile(array('original_maintenance' => $maintenance));
+							// Let's set miantenance 1 until the db isn't updated
+							updateSettingsFile(array('maintenance' => 1));
+						}
 				}
 			}
 	}

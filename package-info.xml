@@ -16,7 +16,7 @@
 		<require-file name="PrivateTopicsTools.php" destination="$sourcedir">source</require-file>
 		<require-file name="PrivateTopics.english.php" destination="$languagedir">lang</require-file>
 		<require-file name="PrivateTopics.template.php" destination="$themedir">theme</require-file>
-		<redirect url="$scripturl?action=admin;area=privatetopics" timeout="3000"></redirect>
+		<redirect url="$scripturl?action=admin;area=privatetopics;sa=maintenance" timeout="1000"></redirect>
 	</install>
 
 	<uninstall for="2.0 - 2.0.99">
