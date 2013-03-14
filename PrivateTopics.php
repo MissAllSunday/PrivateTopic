@@ -148,8 +148,7 @@ class PrivateTopics
 		$check = $temp->getSetting('boards');
 
 		if (!empty($check))
-			$array = explode(',', $check);
-
+			$array = unserialize($check);
 		else
 			$array = array();
 
@@ -217,7 +216,7 @@ class PrivateTopics
 
 	public static function settings($return_config = false)
 	{
-		global $txt, $scripturl, $context, $sourcedir;
+		global $txt, $scripturl, $context, $sourcedir, $smcFunc, $modSettings;
 
 		/* I can has Adminz? */
 		isAllowedTo('admin_forum');
@@ -225,10 +224,30 @@ class PrivateTopics
 		$tools = self::doTools();
 
 		require_once($sourcedir . '/ManageServer.php');
+		loadTemplate('PrivateTopics');
+		loadLanguage('ManageMembers');
+
+		$selected_board = unserialize($tools->getSetting('boards') ? $tools->getSetting('boards') : serialize(array()));
+		$context['boards'] = array();
+		$result = $smcFunc['db_query']('', '
+			SELECT id_board, name, child_level
+			FROM {db_prefix}boards
+			ORDER BY board_order',
+			array(
+			)
+		);
+		while ($row = $smcFunc['db_fetch_assoc']($result))
+			$context['boards'][$row['id_board']] = array(
+				'id' => $row['id_board'],
+				'name' => $row['name'],
+				'child_level' => $row['child_level'],
+				'selected' => in_array($row['id_board'], $selected_board)
+			);
+		$smcFunc['db_free_result']($result);
 
 		$config_vars = array(
 			array('check', self::$name .'_enable', 'subtext' => $tools->getText('enable_sub')),
-			array('text', self::$name .'_boards', 'size' => 10, 'subtext' => $tools->getText('boards_sub')),
+			array('callback', self::$name .'_boards', 'subtext' => $tools->getText('boards_sub')),
 			array('text', self::$name .'_boardindex_message', 'size' => 70, 'subtext' => $tools->getText('boardindex_message_sub')),
 
 		);
@@ -248,13 +267,13 @@ class PrivateTopics
 			/* Clean the boards var, we only want integers and nothing else! */
 			if (!empty($_POST['PrivateTopics_boards']))
 			{
-				$PrivateTopics_boards = explode(',', preg_replace('/[^0-9,]/', '', $_POST['PrivateTopics_boards']));
+				$save_board = array();
 
-				foreach ($PrivateTopics_boards as $key => $value)
-					if ($value == '')
-						unset($PrivateTopics_boards[$key]);
+				foreach ($_POST['PrivateTopics_boards'] as $key => $value)
+					if (isset($context['boards'][$value]))
+						$save_board[] = $value;
 
-				$_POST['PrivateTopics_boards'] = implode(',', $PrivateTopics_boards);
+				updateSettings(array('PrivateTopics_boards' => serialize($save_board)));
 			}
 
 			saveDBSettings($config_vars);
