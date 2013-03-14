@@ -231,8 +231,10 @@
 
 				if (!empty($ptBoard) && $ptCanSet && is_array($ptArray))
 				{
-					$context['ptenable'] = $ptArray != 'no';
-					$context['ptusers'] = implode(',', $ptArray);
+					$context['ptenable'] = $ptArray !== false;
+					$context['ptusers'] = $smcFunc['htmlspecialchars']('"' . implode('", "', $ptArray) . '"');
+					foreach ($ptArray as $key => $name)
+						$context['ptusers_auto'][$key] = $name;
 				}
 		}
 
@@ -268,7 +270,7 @@
 
 			$ptuserstemp2 = array_unique($ptuserstemp);
 
-			$ptusers = implode(',', $ptuserstemp);
+			$ptusers = $ptuserstemp;
 		}
 
 		/* No? then do it the old way instead */
@@ -297,7 +299,7 @@
 			$ptuserstemp2 = array_unique($ptuserstemp);
 
 			/* Done, fill up the array */
-			$ptusers = implode(',', $ptuserstemp2);
+			$ptusers = $ptuserstemp2;
 		}
 
 		/* If there was no users, then use the topic starter */
@@ -324,8 +326,8 @@
 
 		<operation>
 			<search position="replace"><![CDATA[modifyPost($msgOptions, $topicOptions, $posterOptions);]]></search>
-			<add><![CDATA[/* Only update if there is a previous record */
-		if ($ptsave && $pt->doGet() != 'no')
+			<add><![CDATA[		/* Only update if there is a previous record */
+		if ($ptsave && $pt->doGet() !== false)
 			$pt->doUpdate($topicOptions['id']);
 
 		modifyPost($msgOptions, $topicOptions, $posterOptions);]]></add>
@@ -513,7 +515,23 @@ function suggestMember()
 		sURLMask: \'action=profile;u=%item_id%\',
 		sTextDeleteItem: \'', $txt['autosuggest_delete_item'], '\',
 		bItemList: true,
-		sItemListContainerId: \'to_item_list_container\',
+		sItemListContainerId: \'to_item_list_container\',';
+	if (!empty($context['ptusers']))
+	{
+		echo '
+		aListItems: [';
+		$i = 0;
+		foreach ($context['ptusers_auto'] as $id => $member)
+			echo '
+					{
+						sItemId: ', JavaScriptEscape($id), ',
+						sItemName: ', JavaScriptEscape($member), '
+					}', $i++ == count($context['ptusers_auto']) - 1 ? '' : ',';
+
+		echo '
+				],';
+	}
+echo '
 	});
 }
 suggestMember();

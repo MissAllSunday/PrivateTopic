@@ -60,17 +60,21 @@ class PrivateTopics
 
 		$this->_topic = $topic;
 
+		$save = array();
+		foreach ($this->_users as $user)
+			$save[] = array(
+				$this->_topic,
+				$user,
+			);
+
 		$smcFunc['db_insert']('replace',
 			'{db_prefix}private_topics',
 			array(
 				'topic_id' => 'int',
-				'users' => 'string'
+				'user' => 'int'
 			),
-			array(
-				$this->_topic,
-				$this->_users
-			),
-			array('topic_id')
+			$save,
+			array('topic_id', 'user')
 		);
 	}
 
@@ -82,14 +86,14 @@ class PrivateTopics
 		cache_put_data(self::$name .':'. $id, '', 120);
 
 		$smcFunc['db_query']('', '
-			UPDATE {db_prefix}private_topics
-			SET users = {string:users}
+			DELETE FROM {db_prefix}private_topics
 			WHERE topic_id = {int:topic_id}',
 			array(
-				'topic_id' => $id,
-				'users' => $this->_users
+				'topic_id' => $id
 			)
 		);
+
+		$this->doSave($id);
 	}
 
 	public function doGet()
@@ -102,27 +106,32 @@ class PrivateTopics
 		if (($this->_return = cache_get_data(self::$name .':'. $this->_topic, 120)) == null)
 		{
 			$this->_request = $smcFunc['db_query']('', '
-				SELECT users, topic_id
-				FROM {db_prefix}private_topics
-				WHERE topic_id = {int:topic}
-				LIMIT 1',
+				SELECT pt.user, pt.topic_id, mem.real_name
+				FROM {db_prefix}private_topics as pt
+					LEFT JOIN {db_prefix}members as mem ON (pt.user = mem.id_member)
+				WHERE topic_id = {int:topic}',
 				array(
 					'topic' => $this->_topic,
 				)
 			);
 
-			$temp = $smcFunc['db_fetch_assoc']($this->_request);
-
-			if (!empty($temp))
-				$this->_return = explode(',', $temp['users']);
-
-			else
-				$this->_return = 'no';
-
-				/* Cache this beauty */
-				cache_put_data(self::$name .':'. $this->_topic, $this->_return, 120);
+			$temp = array();
+			while ($row = $smcFunc['db_fetch_assoc']($this->_request))
+			{
+				if (!empty($row['real_name']))
+					$temp[$row['user']] = $row['real_name'];
+					
+				}
 
 			$smcFunc['db_free_result']($this->_request);
+
+			if (!empty($temp))
+				$this->_return = $temp;
+			else
+				$this->_return = false;
+
+			/* Cache this beauty */
+			cache_put_data(self::$name .':'. $this->_topic, $this->_return, 120);
 		}
 
 		return $this->_return;

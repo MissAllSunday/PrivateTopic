@@ -52,8 +52,7 @@ $txt['permissionname_can_always_see_private_topics'] = 'Can always see private t
 $txt['permissionname_PrivateTopics_title'] = 'Private Topics';
 
 /* Post strings */
-$txt['PrivateTopics_post_message'] = 'Type the user ID';
-$txt['PrivateTopics_post_example'] = 'Use commas, example: 1,2,3,4';
+$txt['PrivateTopics_post_message'] = 'Users allowed to see the topic:';
 $txt['PrivateTopics_post_enable'] = 'Mark as private topic';
 
 /* Send pm */
