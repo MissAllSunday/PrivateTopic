@@ -63,7 +63,7 @@ class PrivateTopics
 
 		$this->_topic = $topic;
 
-		$save = array();
+		$save = array(array($this->_topic, -1));
 		foreach ($this->_users as $user)
 			$save[] = array(
 				$this->_topic,
@@ -247,9 +247,7 @@ class PrivateTopics
 
 	public static function maintenance($return_config = false)
 	{
-		global $smcFunc, $context, $maintenance, $modSettings, $db_prefix, $sourcedir;
-// $context['continue_get_data']
-// _updateCompatTopic
+		global $smcFunc, $context, $maintenance, $modSettings, $db_prefix, $sourcedir, $txt;
 
 		isAllowedTo('admin_forum');
 

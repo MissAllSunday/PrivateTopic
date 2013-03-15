@@ -58,40 +58,24 @@
 
 	<file name="$sourcedir/Profile-View.php">
 		<operation>
-			<search position="replace"><![CDATA[t.approved, m.body, m.smileys_enabled, m.subject, m.poster_time, m.id_topic, m.id_msg]]></search>
-			<add><![CDATA[t.approved, m.body, m.smileys_enabled, m.subject, m.poster_time, m.id_topic, m.id_msg, pt.topic_id, pt.users]]></add>
+			<search position="before"><![CDATA[INNER JOIN {db_prefix}messages AS m ON (m.id_msg = t.id_first_msg)]]></search>
+			<add><![CDATA[
+					LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))]]></add>
 		</operation>
 		<operation>
-			<search position="replace"><![CDATA[INNER JOIN {db_prefix}messages AS m ON (m.id_msg = t.id_first_msg)]]></search>
-			<add><![CDATA[INNER JOIN {db_prefix}messages AS m ON (m.id_msg = t.id_first_msg)
-					LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)]]></add>
+			<search position="after"><![CDATA[				ORDER BY t.id_first_msg ' . ($reverse ? 'ASC' : 'DESC') . ']]></search>
+			<add><![CDATA[				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .'
+]]></add>
 		</operation>
 		<operation>
-			<search position="replace"><![CDATA[ORDER BY t.id_first_msg ' . ($reverse ? 'ASC' : 'DESC') . ']]></search>
-			<add><![CDATA['. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
-				ORDER BY t.id_first_msg ' . ($reverse ? 'ASC' : 'DESC') . ']]></add>
-		</operation>
-		<operation>
-			<search position="replace"><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg,]]></search>
-			<add><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg, pt.topic_id, pt.users,]]></add>
-		</operation>
-		<operation>
-			<search position="replace"><![CDATA[LEFT JOIN {db_prefix}categories AS c ON (c.id_cat = b.id_cat)
+			<search position="replace"><![CDATA[
 				WHERE m.id_member = {int:current_member}' . (!empty($board) ? '
-					AND b.id_board = {int:board}' : '') . (empty($range_limit) ? '' : '
-					AND ' . $range_limit) . '
-					AND {query_see_board}' . (!$modSettings['postmod_active'] || $context['user']['is_owner'] ? '' : '
-					AND t.approved = {int:is_approved} AND m.approved = {int:is_approved}') . '
-				ORDER BY m.id_msg ' . ($reverse ? 'ASC' : 'DESC') . ']]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}categories AS c ON (c.id_cat = b.id_cat)
-					LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
-				WHERE m.id_member = {int:current_member}' . (!empty($board) ? '
-					AND b.id_board = {int:board}' : '') . (empty($range_limit) ? '' : '
-					AND ' . $range_limit) . '
-					AND {query_see_board}' . (!$modSettings['postmod_active'] || $context['user']['is_owner'] ? '' : '
-					AND t.approved = {int:is_approved} AND m.approved = {int:is_approved}') . '
-					'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
-				ORDER BY m.id_msg ' . ($reverse ? 'ASC' : 'DESC') . ']]></add>
+]]></search>
+			<add><![CDATA[
+					LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
+				WHERE m.id_member = {int:current_member}
+					'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') . (!empty($board) ? '
+]]></add>
 		</operation>
 	</file>
 
@@ -119,82 +103,69 @@
 
 	<file name="$sourcedir/Recent.php">
 		<operation>
-			<search position="replace"><![CDATA[m.id_msg, m.subject, m.smileys_enabled, m.poster_time, m.body, m.id_topic, t.id_board, b.id_cat,]]></search>
-			<add><![CDATA[m.id_msg, m.subject, m.smileys_enabled, m.poster_time, m.body, m.id_topic, t.id_board, b.id_cat, pt.topic_id, pt.users,]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[WHERE m.id_msg IN ({array_int:message_list})]]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
-		WHERE m.id_msg IN ({array_int:message_list})
-			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[ms.id_topic, t.id_board, b.name AS bname,]]></search>
-			<add><![CDATA[ms.id_topic, t.id_board, b.name AS bname, pt.topic_id, pt.users,]]></add>
+			<search position="replace"><![CDATA[				WHERE ' . $query_this_board . ']]></search>
+			<add><![CDATA[					LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
+				WHERE ' . $query_this_board . '
+					'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
 		</operation>
 
 		<operation>
 			<search position="replace"><![CDATA[WHERE b.' . $query_this_board . ']]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
+			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE b.' . $query_this_board . '
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
 		</operation>
 
 		<operation>
 			<search position="replace"><![CDATA[WHERE t.' . $query_this_board . ']]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
+			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE t.' . $query_this_board . '
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
 		</operation>
 
 		<operation>
 			<search position="replace"><![CDATA[WHERE t.' . $query_this_board . ($context['showing_all_topics'] && !empty($earliest_msg) ? '
 				AND t.id_last_msg > {int:earliest_msg}' : (!$context['showing_all_topics'] && empty($_SESSION['first_login']) ? '
 				AND t.id_last_msg > {int:id_msg_last_visit}' : '')) . ']]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
+			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE t.' . $query_this_board . ($context['showing_all_topics'] && !empty($earliest_msg) ? '
 				AND t.id_last_msg > {int:earliest_msg}' : (!$context['showing_all_topics'] && empty($_SESSION['first_login']) ? '
 				AND t.id_last_msg > {int:id_msg_last_visit}' : '')) . '
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
 		</operation>
 
 		<operation>
 			<search position="replace"><![CDATA[WHERE t.id_topic IN ({array_int:topic_list})]]></search>
-			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
+			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE t.id_topic IN ({array_int:topic_list})
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
 		</operation>
 	</file>
 
 	<file name="$sourcedir/Subs-Recent.php">
 		<operation>
-			<search position="replace"><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg,]]></search>
-			<add><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg, pt.topic_id, pt.users,]]></add>
-		</operation>
-		<operation>
 			<search position="replace"><![CDATA[WHERE m.id_msg >= {int:likely_max_msg}]]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
+			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 		WHERE m.id_msg >= {int:likely_max_msg}
-			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
 		</operation>
 	</file>
 
 	<file name="$sourcedir/Search.php">
 		<operation>
-			<search position="replace"><![CDATA[m.id_msg, m.subject, m.poster_name, m.poster_email, m.poster_time, m.id_member,]]></search>
-			<add><![CDATA[m.id_msg, m.subject, m.poster_name, m.poster_email, m.poster_time, m.id_member, pt.topic_id, pt.users,]]></add>
-		</operation>
-		<operation>
 			<search position="replace"><![CDATA[WHERE m.id_msg IN ({array_int:message_list})' . ($modSettings['postmod_active'] ? '
 				AND m.approved = {int:is_approved}' : '') . '
-			ORDER BY FIND_IN_SET(m.id_msg, {string:message_list_in_set})]]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
+			ORDER BY FIND_IN_SET(m.id_msg, {string:message_list_in_set})
+			LIMIT {int:limit}',
+			array(]]></search>
+			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE m.id_msg IN ({array_int:message_list})' . ($modSettings['postmod_active'] ? '
 				AND m.approved = {int:is_approved}' : '') . '
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
-			ORDER BY FIND_IN_SET(m.id_msg, {string:message_list_in_set})]]></add>
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .'
+			ORDER BY FIND_IN_SET(m.id_msg, {string:message_list_in_set})
+			LIMIT {int:limit}',
+			array(
+				'current_member' => $user_info['id'],]]></add>
 		</operation>
 	</file>
 
@@ -423,22 +394,16 @@
 
 	<file name="$sourcedir/MessageIndex.php">
 		<operation>
-			<search position="replace"><![CDATA[t.id_topic, t.num_replies, t.locked, t.num_views, t.is_sticky, t.id_poll, t.id_previous_board,]]></search>
-			<add><![CDATA[t.id_topic, t.num_replies, t.locked, t.num_views, t.is_sticky, t.id_poll, t.id_previous_board, pt.topic_id, pt.users,]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[LEFT JOIN {db_prefix}members AS meml ON (meml.id_member = ml.id_member)
+			<search position="before"><![CDATA[LEFT JOIN {db_prefix}members AS meml ON (meml.id_member = ml.id_member)
 				LEFT JOIN {db_prefix}members AS memf ON (memf.id_member = mf.id_member)]]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}members AS meml ON (meml.id_member = ml.id_member)
-				LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
-				LEFT JOIN {db_prefix}members AS memf ON (memf.id_member = mf.id_member)]]></add>
+			<add><![CDATA[
+				LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))]]></add>
 		</operation>
 
 		<operation>
-			<search position="replace"><![CDATA[ORDER BY ' . ($pre_query ? 'FIND_IN_SET(t.id_topic, {string:find_set_topics})' : (!empty($modSettings['enableStickyTopics']) ?]]></search>
-			<add><![CDATA['. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
-			ORDER BY ' . ($pre_query ? 'FIND_IN_SET(t.id_topic, {string:find_set_topics})' : (!empty($modSettings['enableStickyTopics']) ? ]]></add>
+			<search position="after"><![CDATA[			ORDER BY ' . ($pre_query ? 'FIND_IN_SET(t.id_topic, {string:find_set_topics})' : (!empty($modSettings['enableStickyTopics']) ?]]></search>
+			<add><![CDATA['. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .'
+]]></add>
 		</operation>
 
 		<operation>
@@ -460,6 +425,44 @@
 	/* PrivateTopics mod */
 
 	// If there are children, but no topics and no ability to post topics...]]></add>
+		</operation>
+	</file>
+
+	<file name="$boarddir/SSI.php">
+		<operation>
+			<search position="before"><![CDATA[INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)]]></search>
+			<add><![CDATA[
+			LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))]]></add>
+		</operation>
+
+		<operation>
+			<search position="before"><![CDATA[' . (empty($query_where) ? '' : 'AND ' . $query_where) . ']]></search>
+			<add><![CDATA[
+		'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? (empty($query_where) ? '' : 'AND').' pt.user IS NULL' : '') .']]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[WHERE t.id_last_msg >= {int:min_message_id}]]></search>
+			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
+		WHERE t.id_last_msg >= {int:min_message_id}
+			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
+		</operation>
+
+		<operation>
+			<search position="after"><![CDATA[		WHERE {query_wanna_see_board}' . ($modSettings['postmod_active'] ? ']]></search>
+			<add><![CDATA[			LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
+]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[ORDER BY t.num_' . ($type != 'replies' ? 'views' : 'replies') . ' DESC
+		LIMIT {int:limit}',
+		array(]]></search>
+			<add><![CDATA['. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
+		ORDER BY t.num_' . ($type != 'replies' ? 'views' : 'replies') . ' DESC
+		LIMIT {int:limit}',
+		array(
+			'current_member' => $user_info['id'],]]></add>
 		</operation>
 	</file>
 
@@ -634,53 +637,6 @@ suggestMember();
 						', $txt['in'], ' ', $board['last_post']['link'], '<br />
 						', $txt['on'], ' ', $board['last_post']['time'],'
 						</p>';]]></add>
-		</operation>
-	</file>
-
-	<file name="$boarddir/SSI.php">
-		<operation>
-			<search position="replace"><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg, m.id_board, b.name AS board_name,]]></search>
-			<add><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg, m.id_board, b.name AS board_name, pt.topic_id, pt.users,]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)]]></search>
-			<add><![CDATA[INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)
-			LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[' . (empty($query_where) ? '' : 'AND ' . $query_where) . ']]></search>
-			<add><![CDATA[' . (empty($query_where) ? '' : 'AND ' . $query_where) . '
-		'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? (empty($query_where) ? '' : 'AND').' (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[m.poster_time, ms.subject, m.id_topic, m.id_member, m.id_msg, b.id_board, b.name AS board_name, t.num_replies, t.num_views,]]></search>
-			<add><![CDATA[m.poster_time, ms.subject, m.id_topic, m.id_member, m.id_msg, b.id_board, b.name AS board_name, t.num_replies, t.num_views, pt.topic_id, pt.users,]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[WHERE t.id_last_msg >= {int:min_message_id}]]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
-		WHERE t.id_last_msg >= {int:min_message_id}
-			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
-		</operation>
-		<operation>
-			<search position="replace"><![CDATA[SELECT m.subject, m.id_topic, t.num_views, t.num_replies]]></search>
-			<add><![CDATA[SELECT m.subject, m.id_topic, t.num_views, t.num_replies, pt.topic_id, pt.users]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[WHERE {query_wanna_see_board}' . ($modSettings['postmod_active'] ? ']]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
-		WHERE {query_wanna_see_board}' . ($modSettings['postmod_active'] ? ']]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[ORDER BY t.num_' . ($type != 'replies' ? 'views' : 'replies') . ' DESC]]></search>
-			<add><![CDATA['. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
-		ORDER BY t.num_' . ($type != 'replies' ? 'views' : 'replies') . ' DESC]]></add>
 		</operation>
 	</file>
 </modification>
