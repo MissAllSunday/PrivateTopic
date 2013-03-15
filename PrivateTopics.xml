@@ -428,6 +428,41 @@
 		</operation>
 	</file>
 
+	<file name="$sourcedir/News.php">
+		<operation>
+			<search position="replace"><![CDATA[				INNER JOIN {db_prefix}topics AS t ON (t.id_topic = m.id_topic)
+			WHERE ' . $query_this_board . (empty($optimize_msg) ? '' : ']]></search>
+			<add><![CDATA[				INNER JOIN {db_prefix}topics AS t ON (t.id_topic = m.id_topic)
+				LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
+			WHERE ' . $query_this_board . 
+			(!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? ' AND pt.user IS NULL' : '') . (empty($optimize_msg) ? '' : ']]></add>
+		</operation>
+
+		<operation>
+			<search position="before"><![CDATA[			array(
+				'limit' => $_GET['limit'],]]></search>
+			<add><![CDATA[
+				'current_member' => $user_info['id'],]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[				LEFT JOIN {db_prefix}members AS mem ON (mem.id_member = m.id_member)
+			WHERE ' . $query_this_board . (empty($optimize_msg) ? '' : ']]></search>
+			<add><![CDATA[				LEFT JOIN {db_prefix}members AS mem ON (mem.id_member = m.id_member)
+				LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
+			WHERE ' . $query_this_board . 
+			(!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? ' AND pt.user IS NULL' : '') . (empty($optimize_msg) ? '' : ']]></add>
+		</operation>
+
+		<operation>
+			<search position="before"><![CDATA[			array(
+				'current_board' => $board,
+				'is_approved' => 1,]]></search>
+			<add><![CDATA[
+				'current_member' => $user_info['id'],]]></add>
+		</operation>
+	</file>
+
 	<file name="$boarddir/SSI.php">
 		<operation>
 			<search position="before"><![CDATA[INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)]]></search>
