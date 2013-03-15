@@ -75,7 +75,7 @@
 			if ($exists && $table == '{db_prefix}private_topics')
 			{
 				$addCol = $smcFunc['db_add_column'](
-					'{db_prefix}messages', 
+					'{db_prefix}private_topics', 
 					array(
 						'name' => 'user',
 						'type' => 'int',
