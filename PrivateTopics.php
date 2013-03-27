@@ -30,141 +30,189 @@ function wrapperhandler(){PrivateTopics::handler();}
 
 class PrivateTopics
 {
-	private $_return;
+	private $_allowed_users;
 	private $_topic;
 	private $_users;
-	private $_request;
 	private $_board;
+	public $tools;
 	public static $name = 'PrivateTopics';
 
-	public function __construct($topic = false,  $users = false)
+	public function __construct($topic = false)
 	{
 		if (!empty($topic))
 			$this->_topic = $topic;
 
-		if ($users)
-			$this->_users = $users;
+		$this->_allowed_users = array();
+		$this->initTools();
 
-		$this->_return = array();
-		$this->_request = null;
 	}
 
-	private function unsetRequest()
+	public function allowedToSee($user, $board = false)
 	{
-		$this->_request = null;
+		if ($this->doPermissionsSee())
+			return true;
+
+		$this->doGet();
+		if ($board !== false)
+		{
+			$this->doBoard($board);
+
+			if (!$this->_board)
+				return true;
+		}
+		if (is_array($this->_allowed_users))
+			return isset($this->_allowed_users[$user]);
+		else
+			return true;
 	}
 
-	public function doSave($topic)
+	public function allowedToMake($board)
+	{
+		$this->doBoard($board);
+
+		return $this->_board && $this->doPermissionsSet();
+	}
+
+	public function getListAllowedUsers()
+	{
+		$this->doGet();
+		unset($this->_allowed_users[-1]);
+
+		return !empty($this->_allowed_users) ? $this->_allowed_users : array();
+	}
+
+	public function wasPrivate()
+	{
+		$this->doGet();
+		return !empty($this->_allowed_users);
+	}
+
+	public function updateTopic($topic)
+	{
+		$this->_topic = $topic;
+	}
+
+	public function doSave($users)
 	{
 		global $smcFunc;
 
-		$this->_topic = $topic;
+		if (empty($users))
+			return;
+
+		$save = array(array($this->_topic, -1));
+		foreach ($users as $user)
+			$save[] = array(
+				$this->_topic,
+				$user,
+			);
 
 		$smcFunc['db_insert']('replace',
 			'{db_prefix}private_topics',
 			array(
 				'topic_id' => 'int',
-				'users' => 'string'
+				'user' => 'int'
 			),
-			array(
-				$this->_topic,
-				$this->_users
-			),
-			array('topic_id')
+			$save,
+			array('topic_id', 'user')
 		);
 	}
 
-	public function doUpdate($id)
+	public function doUpdate($ptusers)
 	{
 		global $smcFunc;
 
 		/* Update the cache for this entry */
-		cache_put_data(self::$name .':'. $id, '', 120);
+		cache_put_data(self::$name .':'. $this->_topic, '', 120);
 
 		$smcFunc['db_query']('', '
-			UPDATE {db_prefix}private_topics
-			SET users = {string:users}
+			DELETE FROM {db_prefix}private_topics
 			WHERE topic_id = {int:topic_id}',
 			array(
-				'topic_id' => $id,
-				'users' => $this->_users
+				'topic_id' => $this->_topic
 			)
 		);
+
+		$this->doSave($ptusers);
 	}
 
-	public function doGet()
+	protected function doGet()
 	{
 		global $smcFunc;
 
-		$this->unsetRequest();
-
 		/* Use the cache when possible */
-		if (($this->_return = cache_get_data(self::$name .':'. $this->_topic, 120)) == null)
+		if (($this->_allowed_users = cache_get_data(self::$name .':'. $this->_topic, 120)) == null)
 		{
-			$this->_request = $smcFunc['db_query']('', '
-				SELECT users, topic_id
-				FROM {db_prefix}private_topics
-				WHERE topic_id = {int:topic}
-				LIMIT 1',
+			$request = $smcFunc['db_query']('', '
+				SELECT pt.user, pt.topic_id, mem.real_name
+				FROM {db_prefix}private_topics as pt
+					LEFT JOIN {db_prefix}members as mem ON (pt.user = mem.id_member)
+				WHERE topic_id = {int:topic}',
 				array(
 					'topic' => $this->_topic,
 				)
 			);
 
-			$temp = $smcFunc['db_fetch_assoc']($this->_request);
+			$temp = array();
+			while ($row = $smcFunc['db_fetch_assoc']($request))
+			{
+				if (!empty($row['real_name']))
+					$temp[$row['user']] = $row['real_name'];
+				elseif ($row['user'] == -1)
+					$temp[$row['user']] = 'private';
+			}
+
+			$smcFunc['db_free_result']($request);
 
 			if (!empty($temp))
-				$this->_return = explode(',', $temp['users']);
-
+				$this->_allowed_users = $temp;
 			else
-				$this->_return = 'no';
+				$this->_allowed_users = false;
 
-				/* Cache this beauty */
-				cache_put_data(self::$name .':'. $this->_topic, $this->_return, 120);
-
-			$smcFunc['db_free_result']($this->_request);
+			/* Cache this beauty */
+			cache_put_data(self::$name .':'. $this->_topic, $this->_allowed_users, 120);
 		}
-
-		return $this->_return;
 	}
 
-	public function doTools()
+	protected function initTools()
 	{
 		global $sourcedir;
 
-		if(file_exists($sourcedir. '/PrivateTopicsTools.php'))
-			require_once($sourcedir. '/PrivateTopicsTools.php');
+		require_once($sourcedir. '/PrivateTopicsTools.php');
+
+		$this->tools = PrivateTopicsTools::getInstance();
+	}
+	public static function doTools()
+	{
+		global $sourcedir;
+
+		require_once($sourcedir. '/PrivateTopicsTools.php');
 
 		return PrivateTopicsTools::getInstance();
 	}
 
-	public function doBoard($board)
+	protected function doBoard($board)
 	{
 		if (empty($board))
 			return false;
 
 		$this->_board = false;
 		$temp = $this->doTools();
-		$check = $temp->getSetting('boards');
+		$check = $this->tools->getSetting('boards');
 
 		if (!empty($check))
-			$array = explode(',', $check);
-
+			$array = unserialize($check);
 		else
 			$array = array();
 
-		if (in_array($board, $array))
-			$this->_board = $array;
-
-		return $this->_board;
+		$this->_board = in_array($board, $array);
 	}
 
-	public function doPermissionsSet()
+	protected function doPermissionsSet()
 	{
 		return allowedTo('can_set_topic_as_private');
 	}
 
-	public function doPermissionsSee()
+	protected function doPermissionsSee()
 	{
 		return allowedTo('can_always_see_private_topics');
 	}
@@ -198,7 +246,8 @@ class PrivateTopics
 		$context['page_title'] = $tools->getText('titles');
 
 		$subActions = array(
-			'basic' => 'PrivateTopics::settings'
+			'basic' => 'PrivateTopics::settings',
+			'maintenance' => 'PrivateTopics::maintenance'
 		);
 
 		loadGeneralSettingParameters($subActions, 'basic');
@@ -215,9 +264,93 @@ class PrivateTopics
 		call_user_func($subActions[$_REQUEST['sa']]);
 	}
 
+	public function doMaintenance()
+	{
+		global $smcFunc;
+		$request = $smcFunc['db_query']('', '
+			SELECT users
+			FROM {db_prefix}private_topics
+			WHERE topic_id = {int:topic}
+			LIMIT 1',
+			array(
+				'topic' => $this->_topic,
+			)
+		);
+		$result = $smcFunc['db_fetch_assoc']($request);
+		$smcFunc['db_free_result']($request);
+		$this->doUpdate(explode(',', $result['users']));
+	}
+
+	public static function maintenance($return_config = false)
+	{
+		global $smcFunc, $context, $maintenance, $modSettings, $db_prefix, $sourcedir, $txt;
+
+		isAllowedTo('admin_forum');
+
+		db_extend('packages');
+		$table_name = str_replace('{db_prefix}', $db_prefix, '{db_prefix}private_topics');
+		$columns = $smcFunc['db_list_columns']($table_name, false);
+		loadTemplate('Admin');
+		$increment = 100;
+		$total = isset($_GET['total']) ? (int) $_GET['total'] : false;
+
+		foreach ($columns as $column)
+			// The column is there...let's do something
+			if ($column == 'users')
+			{
+				if ($total === false)
+				{
+					$request = $smcFunc['db_query']('', '
+						SELECT COUNT(*)
+						FROM {db_prefix}private_topics
+						WHERE users != {string:empty}',
+						array(
+							'empty' => ''
+						)
+					);
+					list($total) = $smcFunc['db_fetch_row']($request);
+					$smcFunc['db_free_result']($request);
+				}
+				$request = $smcFunc['db_query']('', '
+					SELECT users, topic_id
+					FROM {db_prefix}private_topics
+					WHERE users != {string:empty}
+					LIMIT {int:increment}',
+					array(
+						'empty' => '',
+						'increment' => $increment
+					)
+				);
+				if ($smcFunc['db_num_rows']($request) > 0)
+				{
+					while ($row = $smcFunc['db_fetch_assoc']($request))
+					{
+						$pt = new PrivateTopics($row['topic_id']);
+						$pt->doMaintenance();
+					}
+					$smcFunc['db_free_result']($request);
+					// we have to break
+					$_GET['done'] = isset($_GET['done']) ? (int) $_GET['done'] : $increment;
+					$context['continue_get_data'] = '?action=admin;area=privatetopics;sa=maintenance;total=' . $total . ';done=' . $_GET['done'] . ';' . $context['session_var'] . '=' . $context['session_id'];
+					$context['page_title'] = $txt['not_done_title'];
+					$context['continue_countdown'] = '2';
+					$context['sub_template'] = 'not_done';
+					$context['continue_post_data'] = '';
+					$context['continue_percent'] = min(100, round($_GET['done'] / $total * 100));
+					return;
+				}
+			}
+
+		require_once($sourcedir . '/Subs-Admin.php');
+		$smcFunc['db_remove_column']('{db_prefix}private_topics', 'users');
+		updateSettingsFile(array('maintenance' => empty($modSettings['original_maintenance']) ? 0 : $modSettings['original_maintenance']));
+		updateSettings(array('original_maintenance' => 0));
+		redirectexit('action=admin;area=privatetopics');
+	}
+
 	public static function settings($return_config = false)
 	{
-		global $txt, $scripturl, $context, $sourcedir;
+		global $txt, $scripturl, $context, $sourcedir, $smcFunc, $modSettings;
 
 		/* I can has Adminz? */
 		isAllowedTo('admin_forum');
@@ -225,10 +358,30 @@ class PrivateTopics
 		$tools = self::doTools();
 
 		require_once($sourcedir . '/ManageServer.php');
+		loadTemplate('PrivateTopics');
+		loadLanguage('ManageMembers');
+
+		$selected_board = unserialize($tools->getSetting('boards') ? $tools->getSetting('boards') : serialize(array()));
+		$context['boards'] = array();
+		$result = $smcFunc['db_query']('', '
+			SELECT id_board, name, child_level
+			FROM {db_prefix}boards
+			ORDER BY board_order',
+			array(
+			)
+		);
+		while ($row = $smcFunc['db_fetch_assoc']($result))
+			$context['boards'][$row['id_board']] = array(
+				'id' => $row['id_board'],
+				'name' => $row['name'],
+				'child_level' => $row['child_level'],
+				'selected' => in_array($row['id_board'], $selected_board)
+			);
+		$smcFunc['db_free_result']($result);
 
 		$config_vars = array(
 			array('check', self::$name .'_enable', 'subtext' => $tools->getText('enable_sub')),
-			array('text', self::$name .'_boards', 'size' => 10, 'subtext' => $tools->getText('boards_sub')),
+			array('callback', self::$name .'_boards', 'subtext' => $tools->getText('boards_sub')),
 			array('text', self::$name .'_boardindex_message', 'size' => 70, 'subtext' => $tools->getText('boardindex_message_sub')),
 
 		);
@@ -248,13 +401,13 @@ class PrivateTopics
 			/* Clean the boards var, we only want integers and nothing else! */
 			if (!empty($_POST['PrivateTopics_boards']))
 			{
-				$PrivateTopics_boards = explode(',', preg_replace('/[^0-9,]/', '', $_POST['PrivateTopics_boards']));
+				$save_board = array();
 
-				foreach ($PrivateTopics_boards as $key => $value)
-					if ($value == '')
-						unset($PrivateTopics_boards[$key]);
+				foreach ($_POST['PrivateTopics_boards'] as $key => $value)
+					if (isset($context['boards'][$value]))
+						$save_board[] = $value;
 
-				$_POST['PrivateTopics_boards'] = implode(',', $PrivateTopics_boards);
+				updateSettings(array('PrivateTopics_boards' => serialize($save_board)));
 			}
 
 			saveDBSettings($config_vars);
