@@ -30,41 +30,77 @@ function wrapperhandler(){PrivateTopics::handler();}
 
 class PrivateTopics
 {
-	private $_return;
+	private $_allowed_users;
 	private $_topic;
 	private $_users;
-	private $_request;
 	private $_board;
+	public $tools;
 	public static $name = 'PrivateTopics';
 
-	public function __construct($topic = false,  $users = false)
+	public function __construct($topic = false)
 	{
 		if (!empty($topic))
 			$this->_topic = $topic;
 
-		if ($users)
-			$this->_users = $users;
+		$this->_allowed_users = array();
+		$this->initTools();
 
-		$this->_return = array();
-		$this->_request = null;
 	}
 
-	private function unsetRequest()
+	public function allowedToSee($user, $board = false)
 	{
-		$this->_request = null;
+		if ($this->doPermissionsSee())
+			return true;
+
+		$this->doGet();
+		if ($board !== false)
+		{
+			$this->doBoard($board);
+
+			if (!$this->_board)
+				return true;
+		}
+		if (is_array($this->_allowed_users))
+			return isset($this->_allowed_users[$user]);
+		else
+			return true;
 	}
 
-	public function doSave($topic)
+	public function allowedToMake($board)
+	{
+		$this->doBoard($board);
+
+		return $this->_board && $this->doPermissionsSet();
+	}
+
+	public function getListAllowedUsers()
+	{
+		$this->doGet();
+		unset($this->_allowed_users[-1]);
+
+		return !empty($this->_allowed_users) ? $this->_allowed_users : array();
+	}
+
+	public function wasPrivate()
+	{
+		$this->doGet();
+		return !empty($this->_allowed_users);
+	}
+
+	public function updateTopic($topic)
+	{
+		$this->_topic = $topic;
+	}
+
+	public function doSave($users)
 	{
 		global $smcFunc;
 
-		if (empty($this->_users))
+		if (empty($users))
 			return;
 
-		$this->_topic = $topic;
-
 		$save = array(array($this->_topic, -1));
-		foreach ($this->_users as $user)
+		foreach ($users as $user)
 			$save[] = array(
 				$this->_topic,
 				$user,
@@ -81,34 +117,32 @@ class PrivateTopics
 		);
 	}
 
-	public function doUpdate($id)
+	public function doUpdate($ptusers)
 	{
 		global $smcFunc;
 
 		/* Update the cache for this entry */
-		cache_put_data(self::$name .':'. $id, '', 120);
+		cache_put_data(self::$name .':'. $this->_topic, '', 120);
 
 		$smcFunc['db_query']('', '
 			DELETE FROM {db_prefix}private_topics
 			WHERE topic_id = {int:topic_id}',
 			array(
-				'topic_id' => $id
+				'topic_id' => $this->_topic
 			)
 		);
 
-		$this->doSave($id);
+		$this->doSave($ptusers);
 	}
 
-	public function doGet()
+	protected function doGet()
 	{
 		global $smcFunc;
 
-		$this->unsetRequest();
-
 		/* Use the cache when possible */
-		if (($this->_return = cache_get_data(self::$name .':'. $this->_topic, 120)) == null)
+		if (($this->_allowed_users = cache_get_data(self::$name .':'. $this->_topic, 120)) == null)
 		{
-			$this->_request = $smcFunc['db_query']('', '
+			$request = $smcFunc['db_query']('', '
 				SELECT pt.user, pt.topic_id, mem.real_name
 				FROM {db_prefix}private_topics as pt
 					LEFT JOIN {db_prefix}members as mem ON (pt.user = mem.id_member)
@@ -119,63 +153,66 @@ class PrivateTopics
 			);
 
 			$temp = array();
-			while ($row = $smcFunc['db_fetch_assoc']($this->_request))
+			while ($row = $smcFunc['db_fetch_assoc']($request))
 			{
 				if (!empty($row['real_name']))
 					$temp[$row['user']] = $row['real_name'];
-					
-				}
+				elseif ($row['user'] == -1)
+					$temp[$row['user']] = 'private';
+			}
 
-			$smcFunc['db_free_result']($this->_request);
+			$smcFunc['db_free_result']($request);
 
 			if (!empty($temp))
-				$this->_return = $temp;
+				$this->_allowed_users = $temp;
 			else
-				$this->_return = false;
+				$this->_allowed_users = false;
 
 			/* Cache this beauty */
-			cache_put_data(self::$name .':'. $this->_topic, $this->_return, 120);
+			cache_put_data(self::$name .':'. $this->_topic, $this->_allowed_users, 120);
 		}
-
-		return $this->_return;
 	}
 
-	public function doTools()
+	protected function initTools()
 	{
 		global $sourcedir;
 
-		if(file_exists($sourcedir. '/PrivateTopicsTools.php'))
-			require_once($sourcedir. '/PrivateTopicsTools.php');
+		require_once($sourcedir. '/PrivateTopicsTools.php');
+
+		$this->tools = PrivateTopicsTools::getInstance();
+	}
+	public static function doTools()
+	{
+		global $sourcedir;
+
+		require_once($sourcedir. '/PrivateTopicsTools.php');
 
 		return PrivateTopicsTools::getInstance();
 	}
 
-	public function doBoard($board)
+	protected function doBoard($board)
 	{
 		if (empty($board))
 			return false;
 
 		$this->_board = false;
 		$temp = $this->doTools();
-		$check = $temp->getSetting('boards');
+		$check = $this->tools->getSetting('boards');
 
 		if (!empty($check))
 			$array = unserialize($check);
 		else
 			$array = array();
 
-		if (in_array($board, $array))
-			$this->_board = $array;
-
-		return $this->_board;
+		$this->_board = in_array($board, $array);
 	}
 
-	public function doPermissionsSet()
+	protected function doPermissionsSet()
 	{
 		return allowedTo('can_set_topic_as_private');
 	}
 
-	public function doPermissionsSee()
+	protected function doPermissionsSee()
 	{
 		return allowedTo('can_always_see_private_topics');
 	}
@@ -241,8 +278,7 @@ class PrivateTopics
 		);
 		$result = $smcFunc['db_fetch_assoc']($request);
 		$smcFunc['db_free_result']($request);
-		$this->_users = empty($result['users']) ? array() : explode(',', $result['users']);
-		$this->doUpdate($this->_topic);
+		$this->doUpdate(explode(',', $result['users']));
 	}
 
 	public static function maintenance($return_config = false)
@@ -289,7 +325,7 @@ class PrivateTopics
 				{
 					while ($row = $smcFunc['db_fetch_assoc']($request))
 					{
-						$pt = new PrivateTopics($row['topic_id'], explode(',', $row['users']));
+						$pt = new PrivateTopics($row['topic_id']);
 						$pt->doMaintenance();
 					}
 					$smcFunc['db_free_result']($request);

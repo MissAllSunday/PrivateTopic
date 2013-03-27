@@ -10,14 +10,9 @@
 			<add><![CDATA[/* PrivateTopics mod */
 	if (!empty($modSettings['PrivateTopics_enable']))
 	{
-		$pt = new PrivateTopics($topic);
-		$ptArray = $pt->doGet();
-		$ptTools = $pt->doTools();
-		$ptBoard = $pt->doBoard($board);
-		$ptPermissionsSee = $pt->doPermissionsSee();
+		$pt = new PrivateTopics($topic, $user_info['id']);
 
-		if ($ptPermissionsSee == false && is_array($ptArray))
-			if ($ptBoard && !in_array($user_info['id'], $ptArray))
+		if (!$pt->allowedToSee($user_info['id'], $board))
 				fatal_lang_error('PrivateTopics_redirect', false);
 	}
 	/* PrivateTopics mod */
@@ -38,13 +33,9 @@
 				if (!empty($modSettings['PrivateTopics_enable']))
 				{
 					$pt = new PrivateTopics($row['id_topic']);
-					$ptArray = $pt->doGet();
-					$ptTools = $pt->doTools();
-					$ptPermissionsSee = $pt->doPermissionsSee();
 
-					if ($ptPermissionsSee == false && is_array($ptArray))
-						if (!in_array($user_info['id'], $ptArray))
-							unset($data[$k]);
+					if ($pt->allowedToSee($user_info['id']))
+						unset($data[$k]);
 
 					else
 						$data[$k] = sprintf($session_text, $row['id_topic'], censorText($row['subject']));
@@ -64,7 +55,7 @@
 		</operation>
 		<operation>
 			<search position="after"><![CDATA[				ORDER BY t.id_first_msg ' . ($reverse ? 'ASC' : 'DESC') . ']]></search>
-			<add><![CDATA[				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .'
+			<add><![CDATA[				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') .'
 ]]></add>
 		</operation>
 		<operation>
@@ -74,7 +65,7 @@
 			<add><![CDATA[
 					LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 				WHERE m.id_member = {int:current_member}
-					'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') . (!empty($board) ? '
+					'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') . (!empty($board) ? '
 ]]></add>
 		</operation>
 	</file>
@@ -86,14 +77,9 @@
 	if (!empty($modSettings['PrivateTopics_enable']))
 	{
 		$pt = new PrivateTopics($topic);
-		$ptArray = $pt->doGet();
-		$ptTools = $pt->doTools();
-		$ptBoard = $pt->doBoard($board_info['id']);
-		$ptPermissionsSee = $pt->doPermissionsSee();
 
-		if ($ptPermissionsSee == false && is_array($ptArray))
-			if ($ptBoard && !in_array($user_info['id'], $ptArray))
-				fatal_lang_error('PrivateTopics_redirect', false);
+		if ($pt->allowedToSee($user_info['id'], $board_info['id']))
+			fatal_lang_error('PrivateTopics_redirect', false);
 	}
 	/* PrivateTopics mod */
 
@@ -106,39 +92,39 @@
 			<search position="replace"><![CDATA[				WHERE ' . $query_this_board . ']]></search>
 			<add><![CDATA[					LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 				WHERE ' . $query_this_board . '
-					'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
+					'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') .']]></add>
 		</operation>
 
 		<operation>
 			<search position="replace"><![CDATA[WHERE b.' . $query_this_board . ']]></search>
 			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE b.' . $query_this_board . '
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') .']]></add>
 		</operation>
 
 		<operation>
 			<search position="replace"><![CDATA[WHERE t.' . $query_this_board . ']]></search>
 			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE t.' . $query_this_board . '
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') .']]></add>
 		</operation>
 
 		<operation>
 			<search position="replace"><![CDATA[WHERE t.' . $query_this_board . ($context['showing_all_topics'] && !empty($earliest_msg) ? '
 				AND t.id_last_msg > {int:earliest_msg}' : (!$context['showing_all_topics'] && empty($_SESSION['first_login']) ? '
 				AND t.id_last_msg > {int:id_msg_last_visit}' : '')) . ']]></search>
-			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
+			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE t.' . $query_this_board . ($context['showing_all_topics'] && !empty($earliest_msg) ? '
 				AND t.id_last_msg > {int:earliest_msg}' : (!$context['showing_all_topics'] && empty($_SESSION['first_login']) ? '
 				AND t.id_last_msg > {int:id_msg_last_visit}' : '')) . '
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') .']]></add>
 		</operation>
 
 		<operation>
 			<search position="replace"><![CDATA[WHERE t.id_topic IN ({array_int:topic_list})]]></search>
 			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE t.id_topic IN ({array_int:topic_list})
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') .']]></add>
 		</operation>
 	</file>
 
@@ -147,7 +133,7 @@
 			<search position="replace"><![CDATA[WHERE m.id_msg >= {int:likely_max_msg}]]></search>
 			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 		WHERE m.id_msg >= {int:likely_max_msg}
-			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
+			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') .']]></add>
 		</operation>
 	</file>
 
@@ -161,7 +147,7 @@
 			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE m.id_msg IN ({array_int:message_list})' . ($modSettings['postmod_active'] ? '
 				AND m.approved = {int:is_approved}' : '') . '
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .'
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') .'
 			ORDER BY FIND_IN_SET(m.id_msg, {string:message_list_in_set})
 			LIMIT {int:limit}',
 			array(
@@ -171,57 +157,48 @@
 
 	<file name="$sourcedir/Post.php">
 		<operation>
-			<search position="after"><![CDATA[// Check if it's locked.  It isn't locked if no topic is specified.]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']) && !empty($topic) && !empty($board))
+			<search position="after"><![CDATA[	// Check if it's locked.  It isn't locked if no topic is specified.]]></search>
+			<add><![CDATA[	/* PrivateTopics mod */
+	$pt = new PrivateTopics($topic);
+	$context['allowed_to_make_private'] = $pt->allowedToMake($board);
+	if (!empty($modSettings['PrivateTopics_enable']) && !empty($topic))
 	{
-		$pt = new PrivateTopics($topic);
-		$ptArray = $pt->doGet();
-		$ptTools = $pt->doTools();
-		$ptBoard = $pt->doBoard($board);
-		$ptPermissionsSee = $pt->doPermissionsSee();
-
-		if ($ptPermissionsSee == false && is_array($ptArray))
-			if ($ptBoard && !in_array($user_info['id'], $ptArray))
+		if (!$pt->allowedToSee($user_info['id'], $board))
 				fatal_lang_error('PrivateTopics_redirect', false);
 	}
 	/* PrivateTopics mod */
 
-	// Check if it's locked.  It isn't locked if no topic is specified.]]></add>
+]]></add>
 		</operation>
 		<operation>
-			<search position="replace"><![CDATA[// Set the destinaton.]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
+			<search position="after"><![CDATA[		// Set the destinaton.]]></search>
+			<add><![CDATA[		/* PrivateTopics mod */
 		if (!empty($topic) && !empty($modSettings['PrivateTopics_enable']))
 		{
 				$pt = new PrivateTopics($topic);
-				$ptArray = $pt->doGet();
-				$ptTools = $pt->doTools();
-				$ptBoard = $pt->doBoard($board);
-				$ptCanSet = $pt->doPermissionsSet();
+				$ptArray = $pt->getListAllowedUsers();
+				$context['allowed_to_make_private'] = $pt->allowedToMake($board);
 
-				if (!empty($ptBoard) && $ptCanSet && is_array($ptArray))
+				if ($context['allowed_to_make_private'])
 				{
-					$context['ptenable'] = $ptArray !== false;
-					$context['ptusers'] = $smcFunc['htmlspecialchars']('"' . implode('", "', $ptArray) . '"');
+					$context['ptenable'] = !empty($ptArray);
+					$context['ptusers'] = !empty($ptArray) ? $smcFunc['htmlspecialchars']('"' . implode('", "', $ptArray) . '"') : '';
 					foreach ($ptArray as $key => $name)
 						$context['ptusers_auto'][$key] = $name;
 				}
 		}
-
 		else
 		{
 			$context['ptenable'] = false;
 			$context['ptusers'] = array();
-
 		}
 		/* PrivateTopics mod */
 
-		// Set the destinaton.]]></add>
+]]></add>
 		</operation>
 		<operation>
-			<search position="replace"><![CDATA[// This is an already existing message. Edit it.]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
+			<search position="after"><![CDATA[	// This is an already existing message. Edit it.]]></search>
+			<add><![CDATA[	/* PrivateTopics mod */
 	$ptsave = false;
 
 	if (!empty($modSettings['PrivateTopics_enable']) && !empty($_REQUEST['ptenable']))
@@ -285,34 +262,31 @@
 				if ($uv != $user_info['id'])
 					$pmToSend[] = $uv;
 
-		$pt = new PrivateTopics($topicOptions['id'], $ptusers);
-		$ptBoard = $pt->doBoard($topicOptions['board']);
-		$ptTools = $pt->doTools();
-
+		$pt = new PrivateTopics($topicOptions['id']);
 		$ptsave = true;
 	}
 
-	// This is an already existing message. Edit it.]]></add>
+]]></add>
 		</operation>
 
 		<operation>
-			<search position="replace"><![CDATA[modifyPost($msgOptions, $topicOptions, $posterOptions);]]></search>
+			<search position="after"><![CDATA[		modifyPost($msgOptions, $topicOptions, $posterOptions);]]></search>
 			<add><![CDATA[		/* Only update if there is a previous record */
-		if ($ptsave && $pt->doGet() !== false)
-			$pt->doUpdate($topicOptions['id']);
+		if ($ptsave && $pt->wasPrivate())
+			$pt->doUpdate($ptusers);
 
-		modifyPost($msgOptions, $topicOptions, $posterOptions);]]></add>
+]]></add>
 		</operation>
 
 		<operation>
-			<search position="replace"><![CDATA[if (isset($topicOptions['id']))
+			<search position="before"><![CDATA[if (isset($topicOptions['id']))
 			$topic = $topicOptions['id'];]]></search>
-			<add><![CDATA[if (isset($topicOptions['id']))
-			$topic = $topicOptions['id'];
+			<add><![CDATA[
 
 		if ($ptsave)
 		{
-			$pt->doSave($topic);
+			$pt->updateTopic($topic);
+			$pt->doSave($ptusers);
 
 			/* Send the pm */
 			if (!empty($pmToSend))
@@ -328,11 +302,9 @@
 						'name' => $user_info['name'],
 						'username' => $user_info['username'],
 					);
-				$ptTopicUrl = $scripturl . '?topic=' . $topic . '.0';
-				$ptUserSend = $user_info['username'];
-				$ptMessage = sprintf($ptTools->getText('pm_message'), $ptTopicUrl, $ptUserSend);
+				$ptMessage = sprintf($pt->tools->getText('pm_message'), $scripturl . '?topic=' . $topic . '.0', $user_info['username']);
 
-				sendpm($recipients, $ptTools->getText('pm_subject'), $ptMessage, false, $from);
+				sendpm($recipients, $pt->tools->getText('pm_subject'), $ptMessage, false, $from);
 			}
 		}]]></add>
 		</operation>
@@ -340,8 +312,8 @@
 
 	<file name="$sourcedir/BoardIndex.php">
 		<operation>
-			<search position="replace"><![CDATA[$context['categories'] = getBoardIndex($boardIndexOptions);]]></search>
-			<add><![CDATA[$context['categories'] = getBoardIndex($boardIndexOptions);
+			<search position="before"><![CDATA[$context['categories'] = getBoardIndex($boardIndexOptions);]]></search>
+			<add><![CDATA[
 
 	/* PrivateTopics mod */
 	if (!empty($modSettings['PrivateTopics_enable']) && !empty($context['categories']))
@@ -351,25 +323,17 @@
 				if (!empty($b['last_post']['topic']))
 				{
 					$pt = new PrivateTopics($b['last_post']['topic']);
-					$ptArray = $pt->doGet();
-					$ptTools = $pt->doTools();
-					$ptBoard = $pt->doBoard($b['id']);
-					$ptPermissionsSee = $pt->doPermissionsSee();
 
 					/* Get the children boards too */
 					if (!empty($b['children']))
 						foreach ($b['children'] as $ch)
 						{
-							$ptchildBoards = $pt->doBoard($ch['id']);
-
-							if ($ptPermissionsSee == false && is_array($ptArray))
-								if ($ptchildBoards && !in_array($user_info['id'], $ptArray) && in_array($ch['id'], $ptchildBoards))
-									unset($context['categories'][$c['id']]['boards'][$b['id']]['last_post']);
+							if (!$pt->allowedToSee($user_info['id'], $b['id']))
+								unset($context['categories'][$c['id']]['boards'][$b['id']]['last_post']);
 						}
 
-					if ($ptPermissionsSee == false && is_array($ptArray))
-						if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($b['id'], $ptBoard))
-							unset($context['categories'][$c['id']]['boards'][$b['id']]['last_post']);
+					if (!$pt->allowedToSee($user_info['id'], $b['id']))
+						unset($context['categories'][$c['id']]['boards'][$b['id']]['last_post']);
 				}
 
 				/* We do the same for children boards */
@@ -378,13 +342,8 @@
 						if(!empty($ch['last_post']['topic']))
 						{
 							$pt = new PrivateTopics($ch['last_post']['topic']);
-							$ptArray = $pt->doGet();
-							$ptTools = $pt->doTools();
-							$ptBoard = $pt->doBoard($ch['id']);
-							$ptPermissionsSee = $pt->doPermissionsSee();
 
-							if ($ptPermissionsSee == false && is_array($ptArray))
-								if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($ch['id'], $ptBoard))
+							if (!$pt->allowedToSee($user_info['id'], $ch['id']))
 									unset($context['categories'][$c['id']]['boards'][$b['id']]['children'][$ch['id']]);
 						}
 			}
@@ -402,29 +361,24 @@
 
 		<operation>
 			<search position="after"><![CDATA[			ORDER BY ' . ($pre_query ? 'FIND_IN_SET(t.id_topic, {string:find_set_topics})' : (!empty($modSettings['enableStickyTopics']) ?]]></search>
-			<add><![CDATA['. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .'
+			<add><![CDATA['. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') .'
 ]]></add>
 		</operation>
 
 		<operation>
-			<search position="replace"><![CDATA[// If there are children, but no topics and no ability to post topics...]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
+			<search position="after"><![CDATA[	// If there are children, but no topics and no ability to post topics...]]></search>
+			<add><![CDATA[	/* PrivateTopics mod */
 	foreach ($context['boards'] as $b)
 		if (!empty($b['last_post']))
 		{
 			$pt = new PrivateTopics($b['last_post']['topic']);
-			$ptArray = $pt->doGet();
-			$ptTools = $pt->doTools();
-			$ptBoard = $pt->doBoard($b['id']);
-			$ptPermissionsSee = $pt->doPermissionsSee();
 
-			if ($ptPermissionsSee == false && is_array($ptArray))
-				if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($b['id'], $ptBoard))
-					unset($context['boards'][$b['id']]['last_post']);
+			if (!$pt->allowedToSee($user_info['id'], $b['id']))
+				unset($context['boards'][$b['id']]['last_post']);
 		}
 	/* PrivateTopics mod */
 
-	// If there are children, but no topics and no ability to post topics...]]></add>
+]]></add>
 		</operation>
 	</file>
 
@@ -435,7 +389,7 @@
 			<add><![CDATA[				INNER JOIN {db_prefix}topics AS t ON (t.id_topic = m.id_topic)
 				LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE ' . $query_this_board . 
-			(!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? ' AND pt.user IS NULL' : '') . (empty($optimize_msg) ? '' : ']]></add>
+			(!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? ' AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') . (empty($optimize_msg) ? '' : ']]></add>
 		</operation>
 
 		<operation>
@@ -451,7 +405,7 @@
 			<add><![CDATA[				LEFT JOIN {db_prefix}members AS mem ON (mem.id_member = m.id_member)
 				LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 			WHERE ' . $query_this_board . 
-			(!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? ' AND pt.user IS NULL' : '') . (empty($optimize_msg) ? '' : ']]></add>
+			(!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? ' AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') . (empty($optimize_msg) ? '' : ']]></add>
 		</operation>
 
 		<operation>
@@ -480,7 +434,7 @@
 			<search position="replace"><![CDATA[WHERE t.id_last_msg >= {int:min_message_id}]]></search>
 			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
 		WHERE t.id_last_msg >= {int:min_message_id}
-			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
+			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.user IS NULL OR pt.user = {int:current_member})' : '') .']]></add>
 		</operation>
 
 		<operation>
@@ -503,13 +457,9 @@
 
 	<file name="$themedir/Post.template.php">
 		<operation>
-			<search position="replace"><![CDATA[// Now show the subject box for this post.]]></search>
-			<add><![CDATA[/* Private Topics mod */
-	$pt = new PrivateTopics();
-	$ptBoard = $pt->doBoard($context['current_board']);
-	$ptCanSet = $pt->doPermissionsSet();
-
-	if (!empty($modSettings['PrivateTopics_enable']) && !empty($ptBoard) && $ptCanSet)
+			<search position="replace"><![CDATA[	// Now show the subject box for this post.]]></search>
+			<add><![CDATA[	/* Private Topics mod */
+	if ($context['allowed_to_make_private'])
 	{
 		echo '
 			<dt class="clear_left">
@@ -528,7 +478,7 @@
 			<div id="to_item_list_container"></div></dd>';
 	}
 
-	// Now show the subject box for this post.]]></add>
+]]></add>
 		</operation>
 
 		<operation>
