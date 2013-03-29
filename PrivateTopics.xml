@@ -231,8 +231,10 @@
 
 				if (!empty($ptBoard) && $ptCanSet && is_array($ptArray))
 				{
-					$context['ptenable'] = $ptArray != 'no';
-					$context['ptusers'] = implode(',', $ptArray);
+					$context['ptenable'] = $ptArray !== false;
+					$context['ptusers'] = $smcFunc['htmlspecialchars']('"' . implode('", "', $ptArray) . '"');
+					foreach ($ptArray as $key => $name)
+						$context['ptusers_auto'][$key] = $name;
 				}
 		}
 
@@ -268,7 +270,7 @@
 
 			$ptuserstemp2 = array_unique($ptuserstemp);
 
-			$ptusers = implode(',', $ptuserstemp);
+			$ptusers = $ptuserstemp;
 		}
 
 		/* No? then do it the old way instead */
@@ -297,7 +299,7 @@
 			$ptuserstemp2 = array_unique($ptuserstemp);
 
 			/* Done, fill up the array */
-			$ptusers = implode(',', $ptuserstemp2);
+			$ptusers = $ptuserstemp2;
 		}
 
 		/* If there was no users, then use the topic starter */
@@ -324,8 +326,8 @@
 
 		<operation>
 			<search position="replace"><![CDATA[modifyPost($msgOptions, $topicOptions, $posterOptions);]]></search>
-			<add><![CDATA[/* Only update if there is a previous record */
-		if ($ptsave && $pt->doGet() != 'no')
+			<add><![CDATA[		/* Only update if there is a previous record */
+		if ($ptsave && $pt->doGet() !== false)
 			$pt->doUpdate($topicOptions['id']);
 
 		modifyPost($msgOptions, $topicOptions, $posterOptions);]]></add>
@@ -461,6 +463,143 @@
 		</operation>
 	</file>
 
+	<file name="$sourcedir/News.php">
+		<operation>
+			<search position="replace"><![CDATA[$request = $smcFunc['db_query']('', '
+			SELECT
+				m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.modified_time,
+				m.icon, t.id_topic, t.id_board, t.num_replies,
+				b.name AS bname,
+				mem.hide_email, IFNULL(mem.id_member, 0) AS id_member,
+				IFNULL(mem.email_address, m.poster_email) AS poster_email,
+				IFNULL(mem.real_name, m.poster_name) AS poster_name
+			FROM {db_prefix}topics AS t
+				INNER JOIN {db_prefix}messages AS m ON (m.id_msg = t.id_first_msg)
+				INNER JOIN {db_prefix}boards AS b ON (b.id_board = t.id_board)
+				LEFT JOIN {db_prefix}members AS mem ON (mem.id_member = m.id_member)
+			WHERE ' . $query_this_board . (empty($optimize_msg) ? '' : '
+				AND {raw:optimize_msg}') . (empty($board) ? '' : '
+				AND t.id_board = {int:current_board}') . ($modSettings['postmod_active'] ? '
+				AND t.approved = {int:is_approved}' : '') . '
+			ORDER BY t.id_first_msg DESC
+			LIMIT {int:limit}',
+			array(
+				'current_board' => $board,
+				'is_approved' => 1,
+				'limit' => $_GET['limit'],
+				'optimize_msg' => $optimize_msg,
+			)
+		);]]></search>
+			<add><![CDATA[$request = $smcFunc['db_query']('', '
+			SELECT
+				m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.modified_time, pt.topic_id, pt.users,
+				m.icon, t.id_topic, t.id_board, t.num_replies,
+				b.name AS bname,
+				mem.hide_email, IFNULL(mem.id_member, 0) AS id_member,
+				IFNULL(mem.email_address, m.poster_email) AS poster_email,
+				IFNULL(mem.real_name, m.poster_name) AS poster_name
+			FROM {db_prefix}topics AS t
+				INNER JOIN {db_prefix}messages AS m ON (m.id_msg = t.id_first_msg)
+				INNER JOIN {db_prefix}boards AS b ON (b.id_board = t.id_board)
+				LEFT JOIN {db_prefix}members AS mem ON (mem.id_member = m.id_member)
+				LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
+			WHERE ' . $query_this_board . (empty($optimize_msg) ? '' : '
+				AND {raw:optimize_msg}') . (empty($board) ? '' : '
+				AND t.id_board = {int:current_board}') . ($modSettings['postmod_active'] ? '
+				AND t.approved = {int:is_approved}' : '') . '
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? '
+				AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
+			ORDER BY t.id_first_msg DESC
+			LIMIT {int:limit}',
+			array(
+				'current_board' => $board,
+				'is_approved' => 1,
+				'limit' => $_GET['limit'],
+				'optimize_msg' => $optimize_msg,
+			)
+		);]]></add>
+		</operation>
+		<operation>
+			<search position="replace"><![CDATA[$request = $smcFunc['db_query']('', '
+			SELECT m.id_msg
+			FROM {db_prefix}messages AS m
+				INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)
+				INNER JOIN {db_prefix}topics AS t ON (t.id_topic = m.id_topic)
+			WHERE ' . $query_this_board . (empty($optimize_msg) ? '' : '
+				AND {raw:optimize_msg}') . (empty($board) ? '' : '
+				AND m.id_board = {int:current_board}') . ($modSettings['postmod_active'] ? '
+				AND m.approved = {int:is_approved}' : '') . '
+			ORDER BY m.id_msg DESC
+			LIMIT {int:limit}',
+			array(
+				'limit' => $_GET['limit'],
+				'current_board' => $board,
+				'is_approved' => 1,
+				'optimize_msg' => $optimize_msg,
+			)
+		);]]></search>
+			<add><![CDATA[$request = $smcFunc['db_query']('', '
+			SELECT m.id_msg, pt.topic_id, pt.users
+			FROM {db_prefix}messages AS m
+				INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)
+				INNER JOIN {db_prefix}topics AS t ON (t.id_topic = m.id_topic)
+				LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
+			WHERE ' . $query_this_board . (empty($optimize_msg) ? '' : '
+				AND {raw:optimize_msg}') . (empty($board) ? '' : '
+				AND m.id_board = {int:current_board}') . ($modSettings['postmod_active'] ? '
+				AND m.approved = {int:is_approved}' : '') . '
+				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? '
+				AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
+			ORDER BY m.id_msg DESC
+			LIMIT {int:limit}',
+			array(
+				'limit' => $_GET['limit'],
+				'current_board' => $board,
+				'is_approved' => 1,
+				'optimize_msg' => $optimize_msg,
+			)
+		);]]></add>
+		</operation>
+	</file>
+
+	<file name="$boarddir/SSI.php">
+		<operation>
+			<search position="before"><![CDATA[INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)]]></search>
+			<add><![CDATA[
+			LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))]]></add>
+		</operation>
+
+		<operation>
+			<search position="before"><![CDATA[' . (empty($query_where) ? '' : 'AND ' . $query_where) . ']]></search>
+			<add><![CDATA[
+		'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? (empty($query_where) ? '' : 'AND').' pt.user IS NULL' : '') .']]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[WHERE t.id_last_msg >= {int:min_message_id}]]></search>
+			<add><![CDATA[	LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
+		WHERE t.id_last_msg >= {int:min_message_id}
+			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND pt.user IS NULL' : '') .']]></add>
+		</operation>
+
+		<operation>
+			<search position="after"><![CDATA[		WHERE {query_wanna_see_board}' . ($modSettings['postmod_active'] ? ']]></search>
+			<add><![CDATA[			LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))
+]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA[ORDER BY t.num_' . ($type != 'replies' ? 'views' : 'replies') . ' DESC
+		LIMIT {int:limit}',
+		array(]]></search>
+			<add><![CDATA['. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
+		ORDER BY t.num_' . ($type != 'replies' ? 'views' : 'replies') . ' DESC
+		LIMIT {int:limit}',
+		array(
+			'current_member' => $user_info['id'],]]></add>
+		</operation>
+	</file>
+
 	<file name="$themedir/Post.template.php">
 		<operation>
 			<search position="replace"><![CDATA[// Now show the subject box for this post.]]></search>
@@ -513,7 +652,23 @@ function suggestMember()
 		sURLMask: \'action=profile;u=%item_id%\',
 		sTextDeleteItem: \'', $txt['autosuggest_delete_item'], '\',
 		bItemList: true,
-		sItemListContainerId: \'to_item_list_container\',
+		sItemListContainerId: \'to_item_list_container\',';
+	if (!empty($context['ptusers']))
+	{
+		echo '
+		aListItems: [';
+		$i = 0;
+		foreach ($context['ptusers_auto'] as $id => $member)
+			echo '
+					{
+						sItemId: ', JavaScriptEscape($id), ',
+						sItemName: ', JavaScriptEscape($member), '
+					}', $i++ == count($context['ptusers_auto']) - 1 ? '' : ',';
+
+		echo '
+				],';
+	}
+echo '
 	});
 }
 suggestMember();
