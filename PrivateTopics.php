@@ -106,9 +106,9 @@ class PrivateTopics
 		if (($this->_return = cache_get_data(self::$name .':'. $this->_topic, 120)) == null)
 		{
 			$this->_request = $smcFunc['db_query']('', '
-				SELECT pt.user, pt.topic_id, mem.real_name
+				SELECT pt.users, pt.topic_id, mem.real_name
 				FROM {db_prefix}private_topics as pt
-					LEFT JOIN {db_prefix}members as mem ON (pt.user = mem.id_member)
+					LEFT JOIN {db_prefix}members as mem ON (pt.users = mem.id_member)
 				WHERE topic_id = {int:topic}',
 				array(
 					'topic' => $this->_topic,
