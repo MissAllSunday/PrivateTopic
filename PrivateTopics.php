@@ -60,17 +60,21 @@ class PrivateTopics
 
 		$this->_topic = $topic;
 
+		$save = array();
+		foreach ($this->_users as $user)
+			$save[] = array(
+				$this->_topic,
+				$user,
+			);
+
 		$smcFunc['db_insert']('replace',
 			'{db_prefix}private_topics',
 			array(
 				'topic_id' => 'int',
-				'users' => 'string'
+				'user' => 'int'
 			),
-			array(
-				$this->_topic,
-				$this->_users
-			),
-			array('topic_id')
+			$save,
+			array('topic_id', 'user')
 		);
 	}
 
@@ -82,14 +86,14 @@ class PrivateTopics
 		cache_put_data(self::$name .':'. $id, '', 120);
 
 		$smcFunc['db_query']('', '
-			UPDATE {db_prefix}private_topics
-			SET users = {string:users}
+			DELETE FROM {db_prefix}private_topics
 			WHERE topic_id = {int:topic_id}',
 			array(
-				'topic_id' => $id,
-				'users' => $this->_users
+				'topic_id' => $id
 			)
 		);
+
+		$this->doSave($id);
 	}
 
 	public function doGet()
@@ -102,27 +106,32 @@ class PrivateTopics
 		if (($this->_return = cache_get_data(self::$name .':'. $this->_topic, 120)) == null)
 		{
 			$this->_request = $smcFunc['db_query']('', '
-				SELECT users, topic_id
-				FROM {db_prefix}private_topics
-				WHERE topic_id = {int:topic}
-				LIMIT 1',
+				SELECT pt.user, pt.topic_id, mem.real_name
+				FROM {db_prefix}private_topics as pt
+					LEFT JOIN {db_prefix}members as mem ON (pt.user = mem.id_member)
+				WHERE topic_id = {int:topic}',
 				array(
 					'topic' => $this->_topic,
 				)
 			);
 
-			$temp = $smcFunc['db_fetch_assoc']($this->_request);
-
-			if (!empty($temp))
-				$this->_return = explode(',', $temp['users']);
-
-			else
-				$this->_return = 'no';
-
-				/* Cache this beauty */
-				cache_put_data(self::$name .':'. $this->_topic, $this->_return, 120);
+			$temp = array();
+			while ($row = $smcFunc['db_fetch_assoc']($this->_request))
+			{
+				if (!empty($row['real_name']))
+					$temp[$row['user']] = $row['real_name'];
+					
+				}
 
 			$smcFunc['db_free_result']($this->_request);
+
+			if (!empty($temp))
+				$this->_return = $temp;
+			else
+				$this->_return = false;
+
+			/* Cache this beauty */
+			cache_put_data(self::$name .':'. $this->_topic, $this->_return, 120);
 		}
 
 		return $this->_return;
@@ -153,8 +162,7 @@ class PrivateTopics
 		$check = $temp->getSetting('boards');
 
 		if (!empty($check))
-			$array = explode(',', $check);
-
+			$array = unserialize($check);
 		else
 			$array = array();
 
@@ -222,7 +230,7 @@ class PrivateTopics
 
 	public static function settings($return_config = false)
 	{
-		global $txt, $scripturl, $context, $sourcedir;
+		global $txt, $scripturl, $context, $sourcedir, $smcFunc, $modSettings;
 
 		/* I can has Adminz? */
 		isAllowedTo('admin_forum');
@@ -230,10 +238,30 @@ class PrivateTopics
 		$tools = self::doTools();
 
 		require_once($sourcedir . '/ManageServer.php');
+		loadTemplate('PrivateTopics');
+		loadLanguage('ManageMembers');
+
+		$selected_board = unserialize($tools->getSetting('boards') ? $tools->getSetting('boards') : serialize(array()));
+		$context['boards'] = array();
+		$result = $smcFunc['db_query']('', '
+			SELECT id_board, name, child_level
+			FROM {db_prefix}boards
+			ORDER BY board_order',
+			array(
+			)
+		);
+		while ($row = $smcFunc['db_fetch_assoc']($result))
+			$context['boards'][$row['id_board']] = array(
+				'id' => $row['id_board'],
+				'name' => $row['name'],
+				'child_level' => $row['child_level'],
+				'selected' => in_array($row['id_board'], $selected_board)
+			);
+		$smcFunc['db_free_result']($result);
 
 		$config_vars = array(
 			array('check', self::$name .'_enable', 'subtext' => $tools->getText('enable_sub')),
-			array('text', self::$name .'_boards', 'size' => 10, 'subtext' => $tools->getText('boards_sub')),
+			array('callback', self::$name .'_boards', 'subtext' => $tools->getText('boards_sub')),
 			array('text', self::$name .'_boardindex_message', 'size' => 70, 'subtext' => $tools->getText('boardindex_message_sub')),
 
 		);
@@ -253,13 +281,13 @@ class PrivateTopics
 			/* Clean the boards var, we only want integers and nothing else! */
 			if (!empty($_POST['PrivateTopics_boards']))
 			{
-				$PrivateTopics_boards = explode(',', preg_replace('/[^0-9,]/', '', $_POST['PrivateTopics_boards']));
+				$save_board = array();
 
-				foreach ($PrivateTopics_boards as $key => $value)
-					if ($value == '')
-						unset($PrivateTopics_boards[$key]);
+				foreach ($_POST['PrivateTopics_boards'] as $key => $value)
+					if (isset($context['boards'][$value]))
+						$save_board[] = $value;
 
-				$_POST['PrivateTopics_boards'] = implode(',', $PrivateTopics_boards);
+				updateSettings(array('PrivateTopics_boards' => serialize($save_board)));
 			}
 
 			saveDBSettings($config_vars);

@@ -36,8 +36,8 @@ $txt['PrivateTopics_settings'] = 'Settings';
 $txt['PrivateTopics_panel_desc'] = 'From Here you can set up the Private Topics Settings';
 $txt['PrivateTopics_enable'] = 'Enable the Private Topics mod';
 $txt['PrivateTopics_enable_sub'] = 'This is the master setting, needs ot be on for the mod to work properly.';
-$txt['PrivateTopics_boards'] = 'Put the Board IDs where you want to use topics as private.';
-$txt['PrivateTopics_boards_sub'] = 'Comma separate, for example: 1,2,3,4';
+$txt['PrivateTopics_boards'] = 'Boards where you want to use topics as private';
+$txt['PrivateTopics_select_boards'] = 'Select the boards';
 $txt['PrivateTopics_redirect'] = 'I\'m sorry, you aren\'t allowed to see this topic.';
 $txt['PrivateTopics_redirect_message'] = 'This message belongs to a private topic.';
 $txt['PrivateTopics_boardindex_message'] = 'Set a custom text for the Board and MessageIndex last topic cell';
@@ -52,8 +52,7 @@ $txt['permissionname_can_always_see_private_topics'] = 'Can always see private t
 $txt['permissionname_PrivateTopics_title'] = 'Private Topics';
 
 /* Post strings */
-$txt['PrivateTopics_post_message'] = 'Type the user ID';
-$txt['PrivateTopics_post_example'] = 'Use commas, example: 1,2,3,4';
+$txt['PrivateTopics_post_message'] = 'Users allowed to see the topic:';
 $txt['PrivateTopics_post_enable'] = 'Mark as private topic';
 
 /* Send pm */

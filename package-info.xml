@@ -15,6 +15,7 @@
 		<require-file name="PrivateTopics.php" destination="$sourcedir">source</require-file>
 		<require-file name="PrivateTopicsTools.php" destination="$sourcedir">source</require-file>
 		<require-file name="PrivateTopics.english.php" destination="$languagedir">lang</require-file>
+		<require-file name="PrivateTopics.template.php" destination="$themedir">theme</require-file>
 		<redirect url="$scripturl?action=admin;area=privatetopics" timeout="3000"></redirect>
 	</install>
 
@@ -24,5 +25,6 @@
 		<modification reverse="true">PrivateTopics.xml</modification>
 		<remove-file name="$sourcedir/PrivateTopics.php" />
 		<remove-file name="$languagedir/PrivateTopics.english.php" />
+		<remove-file name="$themedir/PrivateTopics.template.php" />
 	</uninstall>
 </package-info>
