@@ -45,10 +45,7 @@ class PrivateTopics
 		if (empty($topic) || empty($users))
 			return false;
 
-		$this->_users = (array) $users;
-
-		// Serialize the users
-		$this->handleUsers();
+		$users = $this->encode($users);
 
 		$smcFunc['db_insert']('replace',
 			'{db_prefix}topics',
@@ -58,28 +55,27 @@ class PrivateTopics
 			),
 			array(
 				$topic,
-				$this->_users
+				$users
 			),
 			array('id_topic')
 		);
 	}
 
-	public function doUpdate($id)
+	public function doSave($topic, $users)
 	{
 		global $smcFunc;
 
-		/* Update the cache for this entry */
-		cache_put_data(self::$name .':'. $id, '', 120);
+		/* Clean the cache for this topic */
+		cache_put_data(self::$name .':'. $topic, '', 240);
 
 		$smcFunc['db_query']('', '
-			DELETE FROM {db_prefix}private_topics
-			WHERE topic_id = {int:topic_id}',
+			UPDATE {db_prefix}topics
+			SET private_users = {string:users}
+			WHERE id_topic = {int:id}',
 			array(
-				'topic_id' => $id
+				'users' => $this->encode($users),
 			)
 		);
-
-		$this->doSave($id);
 	}
 
 	public function getUsers($topic = 0)
@@ -121,7 +117,7 @@ class PrivateTopics
 			$smcFunc['db_free_result']($request);
 
 			/* Cache this beauty */
-			cache_put_data(self::$name .':'. $topic, $return, 120);
+			cache_put_data(self::$name .':'. $topic, $return, 240);
 		}
 
 		return $return;
