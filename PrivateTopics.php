@@ -36,44 +36,31 @@ class PrivateTopics
 	protected $_board;
 	public static $name = 'PrivateTopics';
 
-	public function __construct($topic = false,  $users = false)
-	{
-		if (!empty($topic))
-			$this->_topic = $topic;
+	public function __construct(){}
 
-		if ($users)
-			$this->_users = (array) $users;
-
-		$this->_return = array();
-		$this->_request = null;
-	}
-
-	private function unsetRequest()
-	{
-		$this->_request = null;
-	}
-
-	public function doSave($topic)
+	public function doSave($topic, $users)
 	{
 		global $smcFunc;
 
-		$this->_topic = $topic;
+		if (empty($topic) || empty($users))
+			return false;
 
-		$save = array();
-		foreach ($this->_users as $user)
-			$save[] = array(
-				$this->_topic,
-				$user,
-			);
+		$this->_users = (array) $users;
+
+		// Serialize the users
+		$this->handleUsers();
 
 		$smcFunc['db_insert']('replace',
-			'{db_prefix}private_topics',
+			'{db_prefix}topics',
 			array(
-				'topic_id' => 'int',
-				'users' => 'int'
+				'id_topic' => 'int',
+				'users' => 'string'
 			),
-			$save,
-			array('topic_id', 'users')
+			array(
+				$topic,
+				$this->_users
+			),
+			array('id_topic')
 		);
 	}
 
@@ -131,6 +118,17 @@ class PrivateTopics
 		}
 
 		return $this->_return;
+	}
+
+	// Don't go around the bush, this mod needs PHP 5.2, anyway, if you need to make a change do it here.
+	public function encodeUsers()
+	{
+		return json_encode($this->_users);
+	}
+
+	public function decodeUsers()
+	{
+		return json_decode($this->_users);
 	}
 
 	public static function text($var)

@@ -36,36 +36,15 @@
 	db_extend('packages');
 
 	if (empty($context['uninstalling']))
-	{
-		/* @todo don't use a separate table for this, use the already existing topics table... */
-		$tables[] = array(
-			'table_name' => '{db_prefix}private_topics',
-			'columns' => array(
-				array(
-					'name' => 'topic_id',
-					'type' => 'int',
-					'size' => 5,
-					'null' => false
-				),
-				array(
-					'name' => 'users',
+		$smcFunc['db_add_column'](
+			'{db_prefix}topics',
+			array(
+				'name' => 'private_users',
 					'type' => 'text',
 					'size' => '',
 					'default' => '',
-				),
 			),
-			'indexes' => array(
-				array(
-					'type' => 'primary',
-					'columns' => array('topic_id')
-				),
-			),
-			'if_exists' => 'ignore',
-			'error' => 'fatal',
-			'parameters' => array(),
+			array(),
+			'update',
+			null
 		);
-
-		/* Installing */
-		foreach ($tables as $table)
-		$smcFunc['db_create_table']($table['table_name'], $table['columns'], $table['indexes'], $table['parameters'], $table['if_exists'], $table['error']);
-	}
