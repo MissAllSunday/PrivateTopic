@@ -42,29 +42,6 @@ class PrivateTopics
 	{
 		global $smcFunc;
 
-		if (empty($topic) || empty($users))
-			return false;
-
-		$users = $this->encode($users);
-
-		$smcFunc['db_insert']('replace',
-			'{db_prefix}topics',
-			array(
-				'id_topic' => 'int',
-				'users' => 'string'
-			),
-			array(
-				$topic,
-				$users
-			),
-			array('id_topic')
-		);
-	}
-
-	public function doSave($topic, $users)
-	{
-		global $smcFunc;
-
 		/* Clean the cache for this topic */
 		cache_put_data(self::$name .':'. $topic, '', 240);
 
@@ -132,11 +109,13 @@ class PrivateTopics
 
 		if (!empty($check))
 			$check = array_values($this->decode($check));
-;
-		if (is_array($check) && isset($check[$board]))
-			$this->_board = $array;
 
-		return $this->_board;
+		// No boards means the mod cannot work properly so return false.
+		else
+			return false;
+
+		// Return a boolean, true if the mod is enable on this board.
+		return (isset($check[$board]));s
 	}
 
 	public function doPermissionsSet()
