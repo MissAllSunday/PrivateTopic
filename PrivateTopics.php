@@ -4,12 +4,11 @@
  * PrivateTopics.php
  *
  * @package Private Topics mod
- * @version 1.0
- * @author Jessica González <missallsunday@simplemachines.org>
- * @copyright 2012, 2013 Jessica González
+ * @version 1.1
+ * @author Jessica González <suki@missallsunday.com>
+ * @copyright 2012, 2013, 2014 Jessica González
  * @license http://www.mozilla.org/MPL/ MPL 2.0
  *
- * @version 1.0
  */
 
 /*
@@ -71,10 +70,10 @@ class PrivateTopics
 			'{db_prefix}private_topics',
 			array(
 				'topic_id' => 'int',
-				'user' => 'int'
+				'users' => 'int'
 			),
 			$save,
-			array('topic_id', 'user')
+			array('topic_id', 'users')
 		);
 	}
 
@@ -117,11 +116,8 @@ class PrivateTopics
 
 			$temp = array();
 			while ($row = $smcFunc['db_fetch_assoc']($this->_request))
-			{
 				if (!empty($row['real_name']))
-					$temp[$row['user']] = $row['real_name'];
-					
-				}
+					$temp[$row['users']] = $row['real_name'];
 
 			$smcFunc['db_free_result']($this->_request);
 

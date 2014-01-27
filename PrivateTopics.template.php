@@ -4,12 +4,11 @@
  * PrivateTopics.php
  *
  * @package Private Topics mod
- * @version 1.0
- * @author Jessica González <missallsunday@simplemachines.org>
- * @copyright 2012, 2013 Jessica González
+ * @version 1.1
+ * @author Jessica González <suki@missallsunday.com>
+ * @copyright 2012, 2013, 2014 Jessica González
  * @license http://www.mozilla.org/MPL/ MPL 2.0
  *
- * @version 1.0
  */
 
 /*
