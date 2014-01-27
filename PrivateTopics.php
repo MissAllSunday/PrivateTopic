@@ -30,7 +30,7 @@ function PrivateTopics_doSave($topic, $users)
 	global $smcFunc;
 
 	/* Clean the cache for this topic */
-	cache_put_data(self::$name .':'. $topic, '', 240);
+	cache_put_data('PrivateTopics_'. $topic, '', 240);
 
 	$smcFunc['db_query']('', '
 		UPDATE {db_prefix}topics
@@ -50,7 +50,7 @@ function PrivateTopics_getUsers($topic = 0)
 		return false;
 
 	/* Use the cache when possible */
-	if (($this->_return = cache_get_data(self::$name .':'. $topic, 240)) == null)
+	if (($this->_return = cache_get_data('PrivateTopics_'. $topic, 240)) == null)
 	{
 		$result = $smcFunc['db_query']('', '
 			SELECT private_users
@@ -81,7 +81,7 @@ function PrivateTopics_getUsers($topic = 0)
 		$smcFunc['db_free_result']($request);
 
 		/* Cache this beauty */
-		cache_put_data(self::$name .':'. $topic, $return, 240);
+		cache_put_data('PrivateTopics_'. $topic, $return, 240);
 	}
 
 	return $return;
@@ -92,7 +92,7 @@ function PrivateTopics_checkBoards($board)
 	if (empty($board))
 		return false;
 
-	$check = self::setting('boards');
+	$check = $modSettings['PrivateTopics_boards'];
 
 	if (!empty($check))
 		$check = array_values($this->decode($check));
@@ -118,12 +118,12 @@ function PrivateTopics_decode($string, $array = true)
 function PrivateTopics_admin(&$admin_areas)
 {
 	$admin_areas['config']['areas']['privatetopics'] = array(
-		'label' => self::text('title'),
+		'label' => $txt['PrivateTopics_title'],
 		'file' => 'PrivateTopics.php',
 		'function' => 'wrapperhandler',
 		'icon' => 'posts.gif',
 		'subsections' => array(
-			'basic' => array(self::text('settings'))
+			'basic' => array($txt['PrivateTopics_settings'])
 		),
 	);
 }
@@ -137,7 +137,7 @@ function PrivateTopics_handler($return_config = false)
 
 	require_once($sourcedir . '/ManageSettings.php');
 
-	$context['page_title'] = self::text('titles');
+	$context['page_title'] = $txt['PrivateTopics_titles'];
 
 	$subActions = array(
 		'basic' => 'PrivateTopics::settings'
@@ -147,8 +147,8 @@ function PrivateTopics_handler($return_config = false)
 
 	// Load up all the tabs...
 	$context[$context['admin_menu_name']]['tab_data'] = array(
-		'title' => self::text('titles'),
-		'description' => self::text('panel_desc'),
+		'title' => $txt['PrivateTopics_titles'],
+		'description' => $txt['PrivateTopics_panel_desc'],
 		'tabs' => array(
 			'basic' => array()
 		),
@@ -164,13 +164,11 @@ function PrivateTopics_settings($return_config = false)
 	/* I can has Adminz? */
 	isAllowedTo('admin_forum');
 
-	$tools = self::doTools();
-
 	require_once($sourcedir . '/ManageServer.php');
 	loadTemplate('PrivateTopics');
 	loadLanguage('ManageMembers');
 
-	$selected_board = unserialize(self::setting('boards') ? self::setting('boards') : serialize(array()));
+	$selected_board = PrivateTopics_decode(!empty($modSettings['PrivateTopics_boards']) ? $modSettings['PrivateTopics_boards'] : '');
 	$context['boards'] = array();
 	$result = $smcFunc['db_query']('', '
 		SELECT id_board, name, child_level
@@ -179,6 +177,7 @@ function PrivateTopics_settings($return_config = false)
 		array(
 		)
 	);
+
 	while ($row = $smcFunc['db_fetch_assoc']($result))
 		$context['boards'][$row['id_board']] = array(
 			'id' => $row['id_board'],
@@ -186,12 +185,13 @@ function PrivateTopics_settings($return_config = false)
 			'child_level' => $row['child_level'],
 			'selected' => in_array($row['id_board'], $selected_board)
 		);
+
 	$smcFunc['db_free_result']($result);
 
 	$config_vars = array(
-		array('check', self::$name .'_enable', 'subtext' => self::text('enable_sub')),
-		array('callback', self::$name .'_boards', 'subtext' => self::text('boards_sub')),
-		array('text', self::$name .'_boardindex_message', 'size' => 70, 'subtext' => self::text('boardindex_message_sub')),
+		array('check', 'PrivateTopics_enable', 'subtext' => $txt['PrivateTopics_enable_sub')),
+		array('callback', 'PrivateTopics_boards', 'subtext' => $txt['PrivateTopics_boards_sub')),
+		array('text', 'PrivateTopics_boardindex_message', 'size' => 70, 'subtext' => $txt['PrivateTopics_boardindex_message_sub']),
 
 	);
 
@@ -199,8 +199,8 @@ function PrivateTopics_settings($return_config = false)
 		return $config_vars;
 
 	$context['post_url'] = $scripturl . '?action=admin;area=privatetopics;save';
-	$context['settings_title'] = self::text('title');
-	$context['page_title'] = self::text('title');
+	$context['settings_title'] = $txt['PrivateTopics_title'];
+	$context['page_title'] = $txt['PrivateTopics_title'];
 	$context['sub_template'] = 'show_settings';
 
 	if (isset($_GET['save']))
@@ -216,7 +216,7 @@ function PrivateTopics_settings($return_config = false)
 				if (isset($context['boards'][$value]))
 					$save_board[] = $value;
 
-			updateSettings(array('PrivateTopics_boards' => serialize($save_board)));
+			updateSettings(array('PrivateTopics_boards' => PrivateTopics_encode($save_board)));
 		}
 
 		saveDBSettings($config_vars);
