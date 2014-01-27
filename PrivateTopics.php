@@ -140,7 +140,7 @@ function PrivateTopics_handler($return_config = false)
 	$context['page_title'] = $txt['PrivateTopics_titles'];
 
 	$subActions = array(
-		'basic' => 'PrivateTopics::settings'
+		'basic' => 'PrivateTopics_settings'
 	);
 
 	loadGeneralSettingParameters($subActions, 'basic');
@@ -154,7 +154,7 @@ function PrivateTopics_handler($return_config = false)
 		),
 	);
 
-	call_user_func($subActions[$_REQUEST['sa']]);
+	$subActions[$_REQUEST['sa']]();
 }
 
 function PrivateTopics_settings($return_config = false)
