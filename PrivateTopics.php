@@ -105,12 +105,20 @@ function PrivateTopics_checkBoards($board)
 
 function PrivateTopics_encode($string)
 {
-	return json_encode($string);
+	// No json? use serialize.
+	$call = function_exists('json_encode') ? 'json_encode' : 'serialize';
+
+	return $call($string);
 }
 
-function PrivateTopics_decode($string, $array = true)
+function PrivateTopics_decode($string)
 {
-	return json_decode($string, $array);
+	// No json? use serialize.
+	if (function_exists('json_decode'))
+		return json_decode($string, true);
+
+	else
+		return unserialize($string);
 }
 
 function PrivateTopics_admin(&$admin_areas)
