@@ -29,11 +29,11 @@ function wrapperhandler(){PrivateTopics::handler();}
 
 class PrivateTopics
 {
-	private $_return;
-	private $_topic;
-	private $_users;
-	private $_request;
-	private $_board;
+	protected $_return;
+	protected $_topic;
+	protected $_users;
+	protected $_request;
+	protected $_board;
 	public static $name = 'PrivateTopics';
 
 	public function __construct($topic = false,  $users = false)
@@ -42,7 +42,7 @@ class PrivateTopics
 			$this->_topic = $topic;
 
 		if ($users)
-			$this->_users = $users;
+			$this->_users = (array) $users;
 
 		$this->_return = array();
 		$this->_request = null;
@@ -133,16 +133,46 @@ class PrivateTopics
 		return $this->_return;
 	}
 
-	public function doTools()
+	public static function text($var)
 	{
-		global $sourcedir;
+		global $txt;
 
-		if(file_exists($sourcedir. '/PrivateTopicsTools.php'))
-		{
-			require_once($sourcedir. '/PrivateTopicsTools.php');
+		if (empty($var))
+			return false;
 
-			return PrivateTopicsTools::getInstance();
-		}
+		// Load the mod's language file.
+		loadLanguage(self::$name);
+
+		if (!empty($txt[self::$name .'_'. $var]))
+			return $txt[self::$name .'_'. $var];
+
+		else
+			return false;
+	}
+
+	public static function enable($var)
+	{
+		global $modSettings;
+
+		if (empty($var))
+			return false;
+
+		if (isset($modSettings[self::$name .'_'. $var]) && !empty($modSettings[self::$name .'_'. $var]))
+			return true;
+
+		else
+			return false;
+	}
+
+	public static function setting($var)
+	{
+		if (empty($var))
+			return false;
+
+		global $modSettings;
+
+		if (true == $this->enable($var))
+			return $modSettings[self::$name .'_'. $var];
 
 		else
 			return false;
