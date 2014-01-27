@@ -184,8 +184,7 @@ class PrivateTopics
 			return false;
 
 		$this->_board = false;
-		$temp = $this->doTools();
-		$check = $temp->getSetting('boards');
+		$check = self::setting('boards');
 
 		if (!empty($check))
 			$array = unserialize($check);
@@ -210,15 +209,13 @@ class PrivateTopics
 
 	public static function admin(&$admin_areas)
 	{
-		$tools = self::doTools();
-
 		$admin_areas['config']['areas']['privatetopics'] = array(
-			'label' => $tools->getText('title'),
+			'label' => self::text('title'),
 			'file' => 'PrivateTopics.php',
 			'function' => 'wrapperhandler',
 			'icon' => 'posts.gif',
 			'subsections' => array(
-				'basic' => array($tools->getText('settings'))
+				'basic' => array(self::text('settings'))
 			),
 		);
 	}
@@ -227,14 +224,12 @@ class PrivateTopics
 	{
 		global $scripturl, $context, $sourcedir;
 
-		$tools = self::doTools();
-
 		/* I can has Adminz? */
 		isAllowedTo('admin_forum');
 
 		require_once($sourcedir . '/ManageSettings.php');
 
-		$context['page_title'] = $tools->getText('titles');
+		$context['page_title'] = self::text('titles');
 
 		$subActions = array(
 			'basic' => 'PrivateTopics::settings'
@@ -244,8 +239,8 @@ class PrivateTopics
 
 		// Load up all the tabs...
 		$context[$context['admin_menu_name']]['tab_data'] = array(
-			'title' => $tools->getText('titles'),
-			'description' => $tools->getText('panel_desc'),
+			'title' => self::text('titles'),
+			'description' => self::text('panel_desc'),
 			'tabs' => array(
 				'basic' => array()
 			),
@@ -267,7 +262,7 @@ class PrivateTopics
 		loadTemplate('PrivateTopics');
 		loadLanguage('ManageMembers');
 
-		$selected_board = unserialize($tools->getSetting('boards') ? $tools->getSetting('boards') : serialize(array()));
+		$selected_board = unserialize(self::setting('boards') ? self::setting('boards') : serialize(array()));
 		$context['boards'] = array();
 		$result = $smcFunc['db_query']('', '
 			SELECT id_board, name, child_level
@@ -286,9 +281,9 @@ class PrivateTopics
 		$smcFunc['db_free_result']($result);
 
 		$config_vars = array(
-			array('check', self::$name .'_enable', 'subtext' => $tools->getText('enable_sub')),
-			array('callback', self::$name .'_boards', 'subtext' => $tools->getText('boards_sub')),
-			array('text', self::$name .'_boardindex_message', 'size' => 70, 'subtext' => $tools->getText('boardindex_message_sub')),
+			array('check', self::$name .'_enable', 'subtext' => self::text('enable_sub')),
+			array('callback', self::$name .'_boards', 'subtext' => self::text('boards_sub')),
+			array('text', self::$name .'_boardindex_message', 'size' => 70, 'subtext' => self::text('boardindex_message_sub')),
 
 		);
 
@@ -296,8 +291,8 @@ class PrivateTopics
 			return $config_vars;
 
 		$context['post_url'] = $scripturl . '?action=admin;area=privatetopics;save';
-		$context['settings_title'] = $tools->getText('title');
-		$context['page_title'] = $tools->getText('title');
+		$context['settings_title'] = self::text('title');
+		$context['page_title'] = self::text('title');
 		$context['sub_template'] = 'show_settings';
 
 		if (isset($_GET['save']))
