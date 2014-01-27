@@ -37,7 +37,7 @@ function PrivateTopics_doSave($topic, $users)
 		SET private_users = {string:users}
 		WHERE id_topic = {int:id}',
 		array(
-			'users' => $this->encode($users),
+			'users' => PrivateTopics_encode($users),
 		)
 	);
 }
@@ -50,7 +50,7 @@ function PrivateTopics_getUsers($topic = 0)
 		return false;
 
 	/* Use the cache when possible */
-	if (($this->_return = cache_get_data('PrivateTopics_'. $topic, 240)) == null)
+	if (($return = cache_get_data('PrivateTopics_'. $topic, 240)) == null)
 	{
 		$result = $smcFunc['db_query']('', '
 			SELECT private_users
@@ -63,7 +63,7 @@ function PrivateTopics_getUsers($topic = 0)
 
 		list ($users) = $smcFunc['db_fetch_row']($result);
 
-		$users = !empty($users) ? $this->decode($users) : array();
+		$users = !empty($users) ? PrivateTopics_decode($users) : array();
 
 		$request = $smcFunc['db_query']('', '
 			SELECT id_member, real_name
@@ -92,17 +92,15 @@ function PrivateTopics_checkBoards($board)
 	if (empty($board))
 		return false;
 
-	$check = $modSettings['PrivateTopics_boards'];
-
-	if (!empty($check))
-		$check = array_values($this->decode($check));
+	if (!empty($modSettings['PrivateTopics_boards']))
+		$check = array_values(PrivateTopics_decode($modSettings['PrivateTopics_boards']));
 
 	// No boards means the mod cannot work properly so return false.
 	else
 		return false;
 
 	// Return a boolean, true if the mod is enable on this board.
-	return (isset($check[$board]));s
+	return (isset($check[$board]));
 }
 
 function PrivateTopics_encode($string)
