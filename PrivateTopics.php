@@ -82,53 +82,87 @@ class PrivateTopics
 		$this->doSave($id);
 	}
 
-	public function doGet()
+	public function getUsers($topic = 0)
 	{
 		global $smcFunc;
 
-		$this->unsetRequest();
+		if (empty($topic))
+			return false;
 
 		/* Use the cache when possible */
-		if (($this->_return = cache_get_data(self::$name .':'. $this->_topic, 120)) == null)
+		if (($this->_return = cache_get_data(self::$name .':'. $topic, 240)) == null)
 		{
-			$this->_request = $smcFunc['db_query']('', '
-				SELECT pt.users, pt.topic_id, mem.real_name
-				FROM {db_prefix}private_topics as pt
-					LEFT JOIN {db_prefix}members as mem ON (pt.users = mem.id_member)
+			$result = $smcFunc['db_query']('', '
+				SELECT private_users
+				FROM {db_prefix}topics
 				WHERE topic_id = {int:topic}',
 				array(
-					'topic' => $this->_topic,
+					'topic' => $topic,
 				)
 			);
 
-			$temp = array();
-			while ($row = $smcFunc['db_fetch_assoc']($this->_request))
-				if (!empty($row['real_name']))
-					$temp[$row['users']] = $row['real_name'];
+			list ($users) = $smcFunc['db_fetch_row']($result);
 
-			$smcFunc['db_free_result']($this->_request);
+			$users = !empty($users) ? $this->decode($users) : array();
 
-			if (!empty($temp))
-				$this->_return = $temp;
-			else
-				$this->_return = false;
+			$request = $smcFunc['db_query']('', '
+				SELECT id_member, real_name
+				FROM {db_prefix}members
+				WHERE id_member IN({array_int:users})',
+				array(
+					'users' => $users,
+				)
+			);
+
+			$return = array();
+			while ($row = $smcFunc['db_fetch_assoc']($request))
+				$return[$row['id_member']] = $row['real_name'];
+
+			$smcFunc['db_free_result']($request);
 
 			/* Cache this beauty */
-			cache_put_data(self::$name .':'. $this->_topic, $this->_return, 120);
+			cache_put_data(self::$name .':'. $topic, $return, 120);
 		}
 
-		return $this->_return;
+		return $return;
+	}
+
+	public function checkBoards($board)
+	{
+		if (empty($board))
+			return false;
+
+		$check = self::setting('boards');
+
+		if (!empty($check))
+			$check = array_values($this->decode($check));
+;
+		if (is_array($check) && isset($check[$board]))
+			$this->_board = $array;
+
+		return $this->_board;
+	}
+
+	public function doPermissionsSet()
+	{
+		return allowedTo('can_set_topic_as_private');
+	}
+
+	public function doPermissionsSee()
+	{
+		return allowedTo('can_always_see_private_topics');
 	}
 
 	// Don't go around the bush, this mod needs PHP 5.2, anyway, if you need to make a change do it here.
-	public function encodeUsers()
+	public function encode($string)
 	{
-		return json_encode($this->_users);
+		return json_encode($string);
 	}
 
-	public function decodeUsers()
+	// Always work with arrays
+	public function decode($string, $array = true)
 	{
-		return json_decode($this->_users);
+		return json_decode($string, $array);
 	}
 
 	public static function text($var)
@@ -174,35 +208,6 @@ class PrivateTopics
 
 		else
 			return false;
-	}
-
-	public function doBoard($board)
-	{
-		if (empty($board))
-			return false;
-
-		$this->_board = false;
-		$check = self::setting('boards');
-
-		if (!empty($check))
-			$array = unserialize($check);
-		else
-			$array = array();
-
-		if (in_array($board, $array))
-			$this->_board = $array;
-
-		return $this->_board;
-	}
-
-	public function doPermissionsSet()
-	{
-		return allowedTo('can_set_topic_as_private');
-	}
-
-	public function doPermissionsSee()
-	{
-		return allowedTo('can_always_see_private_topics');
 	}
 
 	public static function admin(&$admin_areas)
