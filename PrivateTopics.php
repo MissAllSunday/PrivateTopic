@@ -171,7 +171,7 @@ class PrivateTopics
 
 		global $modSettings;
 
-		if (true == $this->enable($var))
+		if (true == self::enable($var))
 			return $modSettings[self::$name .'_'. $var];
 
 		else
