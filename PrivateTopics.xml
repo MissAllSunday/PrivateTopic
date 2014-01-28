@@ -100,25 +100,7 @@
 		
 		<operation>
 			<search position="replace"><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg,]]></search>
-			<add><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg, pt.topic_id, pt.users,]]></add>
-		</operation>
-		<operation>
-			<search position="replace"><![CDATA[LEFT JOIN {db_prefix}categories AS c ON (c.id_cat = b.id_cat)
-				WHERE m.id_member = {int:current_member}' . (!empty($board) ? '
-					AND b.id_board = {int:board}' : '') . (empty($range_limit) ? '' : '
-					AND ' . $range_limit) . '
-					AND {query_see_board}' . (!$modSettings['postmod_active'] || $context['user']['is_owner'] ? '' : '
-					AND t.approved = {int:is_approved} AND m.approved = {int:is_approved}') . '
-				ORDER BY m.id_msg ' . ($reverse ? 'ASC' : 'DESC') . ']]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}categories AS c ON (c.id_cat = b.id_cat)
-					LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
-				WHERE m.id_member = {int:current_member}' . (!empty($board) ? '
-					AND b.id_board = {int:board}' : '') . (empty($range_limit) ? '' : '
-					AND ' . $range_limit) . '
-					AND {query_see_board}' . (!$modSettings['postmod_active'] || $context['user']['is_owner'] ? '' : '
-					AND t.approved = {int:is_approved} AND m.approved = {int:is_approved}') . '
-					'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
-				ORDER BY m.id_msg ' . ($reverse ? 'ASC' : 'DESC') . ']]></add>
+			<add><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg, t.private_users,]]></add>
 		</operation>
 	</file>
 
