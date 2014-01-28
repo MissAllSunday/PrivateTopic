@@ -44,22 +44,19 @@
 				/* PrivateTopics mod */
 				if (!empty($modSettings['PrivateTopics_enable']))
 				{
-					$pt = new PrivateTopics($row['id_topic']);
-					$ptArray = $pt->doGet();
-					$ptTools = $pt->doTools();
-					$ptPermissionsSee = $pt->doPermissionsSee();
+					// The next easiest thing to do is the permission.
+					if (!allowedTo('can_always_see_private_topics'))
+					{
+						// So, the user don't have the permission, time to hit the server!
+							$ptUsers = PrivateTopics_getUsers($k);
 
-					if ($ptPermissionsSee == false && is_array($ptArray))
-						if (!in_array($user_info['id'], $ptArray))
+						// Sorry, you aren't allowed to see this topic.
+						if (isset($ptUsers[$user_info['id']]))
 							unset($data[$k]);
-
-					else
-						$data[$k] = sprintf($session_text, $row['id_topic'], censorText($row['subject']));
+					}
 				}
 
-				else
-					$data[$k] = sprintf($session_text, $row['id_topic'], censorText($row['subject']));
-			}]]></add>
+				$data[$k] = sprintf($session_text, $row['id_topic'], censorText($row['subject']));]]></add>
 		</operation>
 	</file>
 
