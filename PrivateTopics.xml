@@ -97,7 +97,7 @@
 
 		// Censor....]]></add>
 		</operation>
-		
+
 		<operation>
 			<search position="replace"><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg,]]></search>
 			<add><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg, t.private_users,]]></add>
@@ -110,15 +110,22 @@
 			<add><![CDATA[/* PrivateTopics mod */
 	if (!empty($modSettings['PrivateTopics_enable']))
 	{
-		$pt = new PrivateTopics($topic);
-		$ptArray = $pt->doGet();
-		$ptTools = $pt->doTools();
-		$ptBoard = $pt->doBoard($board_info['id']);
-		$ptPermissionsSee = $pt->doPermissionsSee();
+		// Avoid the extra heat by checking the board first.
+		$ptCheckBoards = PrivateTopics_checkBoards($board_info['id']);
 
-		if ($ptPermissionsSee == false && is_array($ptArray))
-			if ($ptBoard && !in_array($user_info['id'], $ptArray))
-				fatal_lang_error('PrivateTopics_redirect', false);
+		if (!empty($ptCheckBoards))
+		{
+			// The next easiest thing to do is the permission.
+			if (!allowedTo('can_always_see_private_topics'))
+			{
+				// So, this board was selected, and the user don't have the permission, time to hit the server!
+					$ptUsers = PrivateTopics_getUsers($topic);
+
+				// Sorry, you aren't allowed to see this topic.
+				if (isset($ptUsers[$user_info['id']]))
+					fatal_lang_error('PrivateTopics_redirect', false);
+			}
+		}
 	}
 	/* PrivateTopics mod */
 
