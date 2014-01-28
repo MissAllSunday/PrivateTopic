@@ -34,8 +34,8 @@
 	/* Everybody likes hooks */
 	$hooks = array(
 		'integrate_pre_include' => '$sourcedir/PrivateTopics.php',
-		'integrate_load_permissions' => 'PrivateTopics::permissions',
-		'integrate_admin_areas' => 'PrivateTopics::admin',
+		'integrate_load_permissions' => 'PrivateTopics_permissions',
+		'integrate_admin_areas' => 'PrivateTopics_admin',
 	);
 
 	$call = 'add_integration_function';
