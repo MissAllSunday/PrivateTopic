@@ -558,10 +558,7 @@
 
 	/* PrivateTopics mod */
 	if (!empty($modSettings['PrivateTopics_enable']))
-	{
-		// Oh boy! the joy of doing hackish things...
 		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
-	}
 
 	// This is just for safety
 	else
@@ -585,6 +582,38 @@
 		<operation>
 			<search position="replace"><![CDATA[m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.id_topic, t.id_board,]]></search>
 			<add><![CDATA[m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.id_topic, t.id_board, t.private_users,]]></add>
+		</operation>
+		<operation>
+			<search position="replace"><![CDATA[$data = array();
+	while ($row = $smcFunc['db_fetch_assoc']($request))
+	{
+		// Limit the length of the message, if the option is set.]]></search>
+			<add><![CDATA[$data = array();
+
+	/* PrivateTopics mod */
+	if (!empty($modSettings['PrivateTopics_enable']))
+		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
+
+	// This is just for safety
+	else
+		$canSeePrivateTopics = true;
+	/* PrivateTopics mod */
+
+	while ($row = $smcFunc['db_fetch_assoc']($request))
+	{
+		/* PrivateTopics mod */
+		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
+		{
+			// We have the encoded list so lets use it
+			$ptusers = PrivateTopics_decode($row['private_users']);
+
+			// Sorry, you aren't allowed to see this topic.
+			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
+				continue;
+		}
+		/* PrivateTopics mod */
+
+		// Limit the length of the message, if the option is set.]]></add>
 		</operation>
 	</file>
 
