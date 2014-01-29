@@ -338,25 +338,29 @@
 			<search position="replace"><![CDATA[// This is an already existing message. Edit it.]]></search>
 			<add><![CDATA[/* PrivateTopics mod */
 	$ptsave = false;
+	$ptusers = array();
 
 	if (!empty($modSettings['PrivateTopics_enable']) && !empty($_REQUEST['ptenable']))
 	{
 		/* Do they used the auto-suggest thing? */
 		if (!empty($_POST['recipient_to']) && empty($_POST['ptusers']))
 		{
-			foreach ($_POST['recipient_to'] as $u)
-				$ptuserstemp[$u] = (int) $u;
+			$ptusers = explode(',', trim($_POST['ptusers']));
 
-			foreach ($ptuserstemp as $key => $value)
-				if ($value == '')
-					unset($ptuserstemp[$key]);
+			foreach ($ptusers as $k => $v)
+			{
+				if (empty($v))
+					unset($ptusers[$k]);
 
-			/* Let's include the topic creator to the array */
-			$ptuserstemp[$user_info['id']] = $user_info['id'];
+				else
+					$ptusers[$k] = (int) trim($v);
+			}
 
-			$ptuserstemp2 = array_unique($ptuserstemp);
+			/* Let's include the topic creator into the array */
+			$ptusers[] = $user_info['id'];
 
-			$ptusers = $ptuserstemp;
+			// Avoid duplicates.
+			$ptusers = array_unique($ptusers);
 		}
 
 		/* No? then do it the old way instead */
@@ -364,28 +368,16 @@
 		{
 			$usersToLoad = array();
 
-			$_POST['ptusers'] = explode(',', trim($_POST['ptusers']));
+			$ptusers = explode(',', trim($_POST['ptusers']));
 
-			foreach ($_POST['ptusers'] as $k => $v)
+			foreach ($ptusers as $k => $v)
 			{
 				if (empty($v))
-					unset($_POST['ptusers'][$k]);
+					unset($ptusers[$k]);
 
 				else
-					$usersToLoad[] = trim($v);
+					$ptusers[] = (int) trim($v);
 			}
-
-			foreach($usersToLoad as $m)
-				if ($user = loadMemberData($m, false, 'minimal'))
-					$ptuserstemp[$user[0]] = $user[0];
-
-			/* Let's include the topic creator to the array */
-			$ptuserstemp[$user_info['id']] = $user_info['id'];
-
-			$ptuserstemp2 = array_unique($ptuserstemp);
-
-			/* Done, fill up the array */
-			$ptusers = $ptuserstemp2;
 		}
 
 		/* If there was no users, then use the topic starter */
@@ -393,16 +385,8 @@
 			$ptusers = array($user_info['id']);
 
 		/* Let's send a pm to every member, we dont' need to to send the pm to the topic author */
-		$pmToSend = array();
-
-		if (!empty($ptuserstemp2))
-			foreach ($ptuserstemp2 as $uk => $uv)
-				if ($uv != $user_info['id'])
-					$pmToSend[] = $uv;
-
-		$pt = new PrivateTopics($topicOptions['id'], $ptusers);
-		$ptBoard = $pt->doBoard($topicOptions['board']);
-		$ptTools = $pt->doTools();
+		$pmToSend = $ptusers;
+		unset($pmToSend[$user_info['id']]);
 
 		$ptsave = true;
 	}
