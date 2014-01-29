@@ -441,50 +441,44 @@
 			<search position="replace"><![CDATA[$context['categories'] = getBoardIndex($boardIndexOptions);]]></search>
 			<add><![CDATA[$context['categories'] = getBoardIndex($boardIndexOptions);
 
-	/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']) && !empty($context['categories']))
+/* PrivateTopics mod */
+	$ptUsers = array();
+	if (!empty($modSettings['PrivateTopics_enable']) && !empty($context['categories']) && !allowedTo('can_always_see_private_topics'))
 		foreach ($context['categories'] as $c)
 			foreach ($c['boards'] as $b)
 			{
+				$ptCheckBoards = PrivateTopics_checkBoards($b['id']);
+
+				// We're doing lots of loops so try and check things as soon as possible.
+				if (empty($ptCheckBoards))
+					continue;
+
 				if (!empty($b['last_post']['topic']))
 				{
-					$pt = new PrivateTopics($b['last_post']['topic']);
-					$ptArray = $pt->doGet();
-					$ptTools = $pt->doTools();
-					$ptBoard = $pt->doBoard($b['id']);
-					$ptPermissionsSee = $pt->doPermissionsSee();
+					$ptUsers = PrivateTopics_getUsers($b['last_post']['topic']);
 
-					/* Get the children boards too */
-					if (!empty($b['children']))
-						foreach ($b['children'] as $ch)
-						{
-							$ptchildBoards = $pt->doBoard($ch['id']);
-
-							if ($ptPermissionsSee == false && is_array($ptArray))
-								if ($ptchildBoards && !in_array($user_info['id'], $ptArray) && in_array($ch['id'], $ptchildBoards))
-									unset($context['categories'][$c['id']]['boards'][$b['id']]['last_post']);
-						}
-
-					if ($ptPermissionsSee == false && is_array($ptArray))
-						if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($b['id'], $ptBoard))
-							unset($context['categories'][$c['id']]['boards'][$b['id']]['last_post']);
+					if (!empty($ptUsers) && !isset($ptUsers[$user_info['id']]))
+						unset($context['categories'][$c['id']]['boards'][$b['id']]['last_post']);
 				}
 
 				/* We do the same for children boards */
 				if (!empty($b['children']))
 					foreach ($b['children'] as $ch)
+					{
+						$ptCheckBoardsChildren = PrivateTopics_checkBoards($ch['id']);
+
+						// We're doing lots of loops so try and check things as soon as possible.
+						if (empty($ptCheckBoardsChildren))
+							continue;
+
 						if(!empty($ch['last_post']['topic']))
 						{
-							$pt = new PrivateTopics($ch['last_post']['topic']);
-							$ptArray = $pt->doGet();
-							$ptTools = $pt->doTools();
-							$ptBoard = $pt->doBoard($ch['id']);
-							$ptPermissionsSee = $pt->doPermissionsSee();
+							$ptUsers = PrivateTopics_getUsers($ch['last_post']['topic']);
 
-							if ($ptPermissionsSee == false && is_array($ptArray))
-								if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($ch['id'], $ptBoard))
-									unset($context['categories'][$c['id']]['boards'][$b['id']]['children'][$ch['id']]);
+							if (!empty($ptUsers) && !isset($ptUsers[$user_info['id']]))
+								unset($context['categories'][$c['id']]['boards'][$b['id']]['children'][$ch['id']]);
 						}
+					}
 			}
 	/* PrivateTopics mod */]]></add>
 		</operation>
