@@ -313,28 +313,22 @@
 		<operation>
 			<search position="replace"><![CDATA[// Set the destinaton.]]></search>
 			<add><![CDATA[/* PrivateTopics mod */
-		if (!empty($topic) && !empty($modSettings['PrivateTopics_enable']))
+		$context['ptenable'] = false;
+		$context['ptusers'] = array();
+		$context['ptusers_auto'] =false;
+
+		if (!empty($topic) && !empty($board) && !empty($modSettings['PrivateTopics_enable']) && allowedTo('can_set_topic_as_private'))
 		{
-				$pt = new PrivateTopics($topic);
-				$ptArray = $pt->doGet();
-				$ptTools = $pt->doTools();
-				$ptBoard = $pt->doBoard($board);
-				$ptCanSet = $pt->doPermissionsSet();
+			// Avoid the extra heat by checking the board first.
+			$ptCheckBoards = PrivateTopics_checkBoards($board);
 
-				if (!empty($ptBoard) && $ptCanSet && is_array($ptArray))
-				{
-					$context['ptenable'] = $ptArray !== false;
-					$context['ptusers'] = $smcFunc['htmlspecialchars']('"' . implode('", "', $ptArray) . '"');
-					foreach ($ptArray as $key => $name)
-						$context['ptusers_auto'][$key] = $name;
-				}
-		}
-
-		else
-		{
-			$context['ptenable'] = false;
-			$context['ptusers'] = array();
-
+			if (!empty($ptCheckBoards))
+			{
+					$ptUsers = PrivateTopics_getUsers($topic);
+					$context['ptenable'] = !empty($ptUsers);
+					$context['ptusers'] = $ptUsers;
+					$context['ptusers_auto'] = $ptUsers;
+			}
 		}
 		/* PrivateTopics mod */
 
