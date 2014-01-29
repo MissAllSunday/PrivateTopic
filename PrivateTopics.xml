@@ -69,10 +69,7 @@
 			<search position="replace"><![CDATA[// Start counting at the number of the first message displayed.]]></search>
 			<add><![CDATA[/* PrivateTopics mod */
 	if (!empty($modSettings['PrivateTopics_enable']))
-	{
-		// Oh boy! the joy of doing hackish things...
-		$canSeePrivateTopics = !allowedTo('can_always_see_private_topics');
-	}
+		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
 
 	// This is just for safety
 	else
@@ -146,10 +143,7 @@
 		// Censor everything.]]></search>
 			<add><![CDATA[/* PrivateTopics mod */
 	if (!empty($modSettings['PrivateTopics_enable']))
-	{
-		// Don't set this in the loop.
-		$canSeePrivateTopics = !allowedTo('can_always_see_private_topics');
-	}
+		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
 
 	// This is just for safety
 	else
@@ -186,10 +180,7 @@
 			continue;]]></search>
 			<add><![CDATA[	/* PrivateTopics mod */
 	if (!empty($modSettings['PrivateTopics_enable']))
-	{
-		// Oh boy! the joy of doing hackish things...
-		$canSeePrivateTopics = !allowedTo('can_always_see_private_topics');
-	}
+		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
 
 	// This is just for safety
 	else
@@ -235,7 +226,7 @@
 
 	/* PrivateTopics mod */
 	if (!empty($modSettings['PrivateTopics_enable']))
-		$canSeePrivateTopics = !allowedTo('can_always_see_private_topics');
+		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
 
 	// This is just for safety
 	else
@@ -500,7 +491,7 @@
 	if (!empty($modSettings['PrivateTopics_enable']))
 	{
 		// Oh boy! the joy of doing hackish things...
-		$canSeePrivateTopics = !allowedTo('can_always_see_private_topics');
+		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
 	}
 
 	// This is just for safety
@@ -558,6 +549,12 @@
 		<operation>
 			<search position="replace"><![CDATA[m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.modified_time,]]></search>
 			<add><![CDATA[m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.modified_time, t.private_users,]]></add>
+		</operation>
+		<operation>
+			<search position="replace"><![CDATA[$data = array();
+	while ($row = $smcFunc['db_fetch_assoc']($request))
+	{]]></search>
+			<add><![CDATA[]></add>
 		</operation>
 		<operation>
 			<search position="replace"><![CDATA[$request = $smcFunc['db_query']('', '
