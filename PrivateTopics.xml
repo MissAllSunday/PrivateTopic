@@ -396,9 +396,9 @@
 
 		<operation>
 			<search position="replace"><![CDATA[modifyPost($msgOptions, $topicOptions, $posterOptions);]]></search>
-			<add><![CDATA[		/* Only update if there is a previous record */
-		if ($ptsave && $pt->doGet() !== false)
-			$pt->doUpdate($topicOptions['id']);
+			<add><![CDATA[		/* Private Topics mod */
+		if (!empty($ptsave))
+			PrivateTopics_doSave($topicOptions['id'], $ptUsers);
 
 		modifyPost($msgOptions, $topicOptions, $posterOptions);]]></add>
 		</operation>
