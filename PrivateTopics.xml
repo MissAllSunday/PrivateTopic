@@ -81,7 +81,7 @@
 		<operation>
 			<search position="replace"><![CDATA[// Censor....]]></search>
 			<add><![CDATA[/* PrivateTopics mod */
-		if (!empty($modSettings['PrivateTopics_enable']) && !$canSeePrivateTopics && !empty($row['private_users']))
+		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
 		{
 			// We have the encoded list so lets use it
 			$ptusers = PrivateTopics_decode($row['private_users']);
@@ -154,7 +154,7 @@
 	while ($row = $smcFunc['db_fetch_assoc']($request))
 	{
 		/* PrivateTopics mod */
-		if (!empty($modSettings['PrivateTopics_enable']) && !$canSeePrivateTopics && !empty($row['private_users']))
+		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
 		{
 			// We have the encoded list so lets use it
 			$ptusers = PrivateTopics_decode($row['private_users']);
@@ -193,7 +193,7 @@
 			continue;
 
 		/* PrivateTopics mod */
-		if (!empty($modSettings['PrivateTopics_enable']) && !$canSeePrivateTopics && !empty($row['private_users']))
+		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
 		{
 			// Avoid the extra heat by checking the board first.
 			$ptCheckBoards = PrivateTopics_checkBoards($row['id_board']);
@@ -259,7 +259,7 @@
 		<operation>
 			<search position="replace"><![CDATA[// Can't have an empty subject can we?]]></search>
 			<add><![CDATA[/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']) && !$canSeePrivateTopics && !empty($message['private_users']))
+	if (empty($canSeePrivateTopics) && !empty($message['private_users']))
 	{
 		// We have the encoded list so lets use it
 		$ptusers = PrivateTopics_decode($message['private_users']);
@@ -506,7 +506,7 @@
 				continue;
 
 		/* PrivateTopics mod */
-		if (!empty($modSettings['PrivateTopics_enable']) && !$canSeePrivateTopics && !empty($row['private_users']))
+		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
 		{
 			// We have the encoded list so lets use it
 			$ptusers = PrivateTopics_decode($row['private_users']);
