@@ -90,7 +90,7 @@
 			$ptusers = PrivateTopics_decode($row['private_users']);
 
 			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && isset($ptUsers[$user_info['id']]))
+			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
 				continue;
 		}
 		/* PrivateTopics mod */
@@ -166,7 +166,7 @@
 			$ptusers = PrivateTopics_decode($row['private_users']);
 
 			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && isset($ptUsers[$user_info['id']]))
+			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
 				continue;
 		}
 		/* PrivateTopics mod */
@@ -213,7 +213,7 @@
 				$ptusers = PrivateTopics_decode($row['private_users']);
 
 				// Sorry, you aren't allowed to see this topic.
-				if (!empty($ptusers) && isset($ptUsers[$user_info['id']]))
+				if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
 					continue;
 			}
 		}
@@ -251,7 +251,7 @@
 			$ptusers = PrivateTopics_decode($row['private_users']);
 
 			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && isset($ptUsers[$user_info['id']]))
+			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
 				continue;
 		}
 		/* PrivateTopics mod */
@@ -263,17 +263,23 @@
 	<file name="$sourcedir/Search.php">
 		<operation>
 			<search position="replace"><![CDATA[m.id_msg, m.subject, m.poster_name, m.poster_email, m.poster_time, m.id_member,]]></search>
-			<add><![CDATA[m.id_msg, m.subject, m.poster_name, m.poster_email, m.poster_time, m.id_member, pt.topic_id, pt.users,]]></add>
+			<add><![CDATA[m.id_msg, m.subject, m.poster_name, m.poster_email, m.poster_time, m.id_member, t.private_users,]]></add>
 		</operation>
 		<operation>
-			<search position="replace"><![CDATA[WHERE m.id_msg IN ({array_int:message_list})' . ($modSettings['postmod_active'] ? '
-				AND m.approved = {int:is_approved}' : '') . '
-			ORDER BY FIND_IN_SET(m.id_msg, {string:message_list_in_set})]]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
-			WHERE m.id_msg IN ({array_int:message_list})' . ($modSettings['postmod_active'] ? '
-				AND m.approved = {int:is_approved}' : '') . '
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
-			ORDER BY FIND_IN_SET(m.id_msg, {string:message_list_in_set})]]></add>
+			<search position="replace"><![CDATA[// Can't have an empty subject can we?]]></search>
+			<add><![CDATA[/* PrivateTopics mod */
+	if (!empty($modSettings['PrivateTopics_enable']) && !$canSeePrivateTopics && !empty($message['private_users']))
+	{
+		// We have the encoded list so lets use it
+		$ptusers = PrivateTopics_decode($message['private_users']);
+
+		// Sorry, you aren't allowed to see this topic.
+		if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
+			return false;
+	}
+	/* PrivateTopics mod */
+
+	// Can't have an empty subject can we?]]></add>
 		</operation>
 	</file>
 
