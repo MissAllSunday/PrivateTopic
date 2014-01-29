@@ -625,7 +625,7 @@
 		<operation>
 			<search position="before"><![CDATA[INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)]]></search>
 			<add><![CDATA[
-			LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic AND (pt.user = -1 OR pt.user = {int:current_member}))]]></add>
+			LEFT JOIN {db_prefix}topics AS t ON (t.id_topic = m.id_topic)]]></add>
 		</operation>
 
 		<operation>
