@@ -556,59 +556,8 @@
 
 	<file name="$sourcedir/News.php">
 		<operation>
-			<search position="replace"><![CDATA[$request = $smcFunc['db_query']('', '
-			SELECT
-				m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.modified_time,
-				m.icon, t.id_topic, t.id_board, t.num_replies,
-				b.name AS bname,
-				mem.hide_email, IFNULL(mem.id_member, 0) AS id_member,
-				IFNULL(mem.email_address, m.poster_email) AS poster_email,
-				IFNULL(mem.real_name, m.poster_name) AS poster_name
-			FROM {db_prefix}topics AS t
-				INNER JOIN {db_prefix}messages AS m ON (m.id_msg = t.id_first_msg)
-				INNER JOIN {db_prefix}boards AS b ON (b.id_board = t.id_board)
-				LEFT JOIN {db_prefix}members AS mem ON (mem.id_member = m.id_member)
-			WHERE ' . $query_this_board . (empty($optimize_msg) ? '' : '
-				AND {raw:optimize_msg}') . (empty($board) ? '' : '
-				AND t.id_board = {int:current_board}') . ($modSettings['postmod_active'] ? '
-				AND t.approved = {int:is_approved}' : '') . '
-			ORDER BY t.id_first_msg DESC
-			LIMIT {int:limit}',
-			array(
-				'current_board' => $board,
-				'is_approved' => 1,
-				'limit' => $_GET['limit'],
-				'optimize_msg' => $optimize_msg,
-			)
-		);]]></search>
-			<add><![CDATA[$request = $smcFunc['db_query']('', '
-			SELECT
-				m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.modified_time, pt.topic_id, pt.users,
-				m.icon, t.id_topic, t.id_board, t.num_replies,
-				b.name AS bname,
-				mem.hide_email, IFNULL(mem.id_member, 0) AS id_member,
-				IFNULL(mem.email_address, m.poster_email) AS poster_email,
-				IFNULL(mem.real_name, m.poster_name) AS poster_name
-			FROM {db_prefix}topics AS t
-				INNER JOIN {db_prefix}messages AS m ON (m.id_msg = t.id_first_msg)
-				INNER JOIN {db_prefix}boards AS b ON (b.id_board = t.id_board)
-				LEFT JOIN {db_prefix}members AS mem ON (mem.id_member = m.id_member)
-				LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
-			WHERE ' . $query_this_board . (empty($optimize_msg) ? '' : '
-				AND {raw:optimize_msg}') . (empty($board) ? '' : '
-				AND t.id_board = {int:current_board}') . ($modSettings['postmod_active'] ? '
-				AND t.approved = {int:is_approved}' : '') . '
-				'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? '
-				AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
-			ORDER BY t.id_first_msg DESC
-			LIMIT {int:limit}',
-			array(
-				'current_board' => $board,
-				'is_approved' => 1,
-				'limit' => $_GET['limit'],
-				'optimize_msg' => $optimize_msg,
-			)
-		);]]></add>
+			<search position="replace"><![CDATA[m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.modified_time,]]></search>
+			<add><![CDATA[m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.modified_time, t.private_users,]]></add>
 		</operation>
 		<operation>
 			<search position="replace"><![CDATA[$request = $smcFunc['db_query']('', '
