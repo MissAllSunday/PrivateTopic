@@ -409,9 +409,9 @@
 			<add><![CDATA[if (isset($topicOptions['id']))
 			$topic = $topicOptions['id'];
 
-		if ($ptsave)
+		if (!empty($ptsave) && !empty($ptUsers))
 		{
-			$pt->doSave($topic);
+			PrivateTopics_doSave($topic, $ptUsers);
 
 			/* Send the pm */
 			if (!empty($pmToSend))
@@ -428,10 +428,9 @@
 						'username' => $user_info['username'],
 					);
 				$ptTopicUrl = $scripturl . '?topic=' . $topic . '.0';
-				$ptUserSend = $user_info['username'];
-				$ptMessage = sprintf($ptTools->getText('pm_message'), $ptTopicUrl, $ptUserSend);
+				$ptMessage = sprintf($txt['PrivateTopics_pm_message'], $ptTopicUrl, $user_info['username']);
 
-				sendpm($recipients, $ptTools->getText('pm_subject'), $ptMessage, false, $from);
+				sendpm($recipients, $txt['PrivateTopics_pm_subject'], $ptMessage, false, $from);
 			}
 		}]]></add>
 		</operation>
