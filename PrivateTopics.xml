@@ -531,18 +531,23 @@
 			<search position="replace"><![CDATA[// If there are children, but no topics and no ability to post topics...]]></search>
 			<add><![CDATA[/* PrivateTopics mod */
 	foreach ($context['boards'] as $b)
+	{
+		// Avoid the extra heat by checking the board first.
+		$ptCheckBoards = PrivateTopics_checkBoards($board);
+
+		if (empty($ptCheckBoards))
+			continue;
+
 		if (!empty($b['last_post']))
 		{
-			$pt = new PrivateTopics($b['last_post']['topic']);
-			$ptArray = $pt->doGet();
-			$ptTools = $pt->doTools();
-			$ptBoard = $pt->doBoard($b['id']);
-			$ptPermissionsSee = $pt->doPermissionsSee();
+			// So, this board was selected, and the user don't have the permission, time to hit the server!
+				$ptUsers = PrivateTopics_getUsers($b['last_post']['topic']);
 
-			if ($ptPermissionsSee == false && is_array($ptArray))
-				if ($ptBoard && !in_array($user_info['id'], $ptArray) && in_array($b['id'], $ptBoard))
-					unset($context['boards'][$b['id']]['last_post']);
+			// Sorry, you aren't allowed to see this topic.
+			if (!empty($ptUsers && )!isset($ptUsers[$user_info['id']]))
+				unset($context['boards'][$b['id']]['last_post']);
 		}
+	}
 	/* PrivateTopics mod */
 
 	// If there are children, but no topics and no ability to post topics...]]></add>
