@@ -55,7 +55,7 @@ function PrivateTopics_getUsers($topic = 0)
 		$result = $smcFunc['db_query']('', '
 			SELECT private_users
 			FROM {db_prefix}topics
-			WHERE topic_id = {int:topic}',
+			WHERE id_topic = {int:topic}',
 			array(
 				'topic' => $topic,
 			)
@@ -64,6 +64,9 @@ function PrivateTopics_getUsers($topic = 0)
 		list ($users) = $smcFunc['db_fetch_row']($result);
 
 		$users = !empty($users) ? PrivateTopics_decode($users) : array();
+
+		if (empty($users))
+			return array();
 
 		$request = $smcFunc['db_query']('', '
 			SELECT id_member, real_name
@@ -123,10 +126,14 @@ function PrivateTopics_decode($string)
 
 function PrivateTopics_admin(&$admin_areas)
 {
+	global $txt;
+
+	loadLanguage('PrivateTopics');
+
 	$admin_areas['config']['areas']['privatetopics'] = array(
 		'label' => $txt['PrivateTopics_title'],
 		'file' => 'PrivateTopics.php',
-		'function' => 'wrapperhandler',
+		'function' => 'PrivateTopics_handler',
 		'icon' => 'posts.gif',
 		'subsections' => array(
 			'basic' => array($txt['PrivateTopics_settings'])
@@ -136,14 +143,14 @@ function PrivateTopics_admin(&$admin_areas)
 
 function PrivateTopics_handler($return_config = false)
 {
-	global $scripturl, $context, $sourcedir;
+	global $scripturl, $context, $sourcedir, $txt;
 
 	/* I can has Adminz? */
 	isAllowedTo('admin_forum');
 
 	require_once($sourcedir . '/ManageSettings.php');
 
-	$context['page_title'] = $txt['PrivateTopics_titles'];
+	$context['page_title'] = $txt['PrivateTopics_title'];
 
 	$subActions = array(
 		'basic' => 'PrivateTopics_settings'
@@ -153,7 +160,7 @@ function PrivateTopics_handler($return_config = false)
 
 	// Load up all the tabs...
 	$context[$context['admin_menu_name']]['tab_data'] = array(
-		'title' => $txt['PrivateTopics_titles'],
+		'title' => $txt['PrivateTopics_title'],
 		'description' => $txt['PrivateTopics_panel_desc'],
 		'tabs' => array(
 			'basic' => array()
@@ -174,7 +181,7 @@ function PrivateTopics_settings($return_config = false)
 	loadTemplate('PrivateTopics');
 	loadLanguage('ManageMembers');
 
-	$selected_board = PrivateTopics_decode(!empty($modSettings['PrivateTopics_boards']) ? $modSettings['PrivateTopics_boards'] : '');
+	$selected_board = !empty($modSettings['PrivateTopics_boards']) ? PrivateTopics_decode($modSettings['PrivateTopics_boards']) : array();
 	$context['boards'] = array();
 	$result = $smcFunc['db_query']('', '
 		SELECT id_board, name, child_level
@@ -195,10 +202,9 @@ function PrivateTopics_settings($return_config = false)
 	$smcFunc['db_free_result']($result);
 
 	$config_vars = array(
-		array('check', 'PrivateTopics_enable', 'subtext' => $txt['PrivateTopics_enable_sub')),
-		array('callback', 'PrivateTopics_boards', 'subtext' => $txt['PrivateTopics_boards_sub')),
+		array('check', 'PrivateTopics_enable', 'subtext' => $txt['PrivateTopics_enable_sub']),
+		array('callback', 'PrivateTopics_boards', 'subtext' => $txt['PrivateTopics_boards_sub']),
 		array('text', 'PrivateTopics_boardindex_message', 'size' => 70, 'subtext' => $txt['PrivateTopics_boardindex_message_sub']),
-
 	);
 
 	if ($return_config)

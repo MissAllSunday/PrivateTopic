@@ -68,12 +68,7 @@
 		<operation>
 			<search position="replace"><![CDATA[// Start counting at the number of the first message displayed.]]></search>
 			<add><![CDATA[/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
-
-	// This is just for safety
-	else
-		$canSeePrivateTopics = true;
+	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
 	/* PrivateTopics mod */
 
 	// Start counting at the number of the first message displayed.]]></add>
@@ -142,12 +137,7 @@
 	{
 		// Censor everything.]]></search>
 			<add><![CDATA[/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
-
-	// This is just for safety
-	else
-		$canSeePrivateTopics = true;
+	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
 	/* PrivateTopics mod */
 
 	$board_ids = array('own' => array(), 'any' => array());
@@ -179,12 +169,7 @@
 		if ($row['id_poll'] > 0 && $modSettings['pollMode'] == '0')
 			continue;]]></search>
 			<add><![CDATA[	/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
-
-	// This is just for safety
-	else
-		$canSeePrivateTopics = true;
+	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
 	/* PrivateTopics mod */
 
 	while ($row = $smcFunc['db_fetch_assoc']($request))
@@ -225,12 +210,7 @@
 			<add><![CDATA[$posts = array();
 
 	/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
-
-	// This is just for safety
-	else
-		$canSeePrivateTopics = true;
+	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
 	/* PrivateTopics mod */
 
 	while ($row = $smcFunc['db_fetch_assoc']($request))
@@ -295,8 +275,14 @@
 				if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
 					fatal_lang_error('PrivateTopics_redirect', false);
 			}
+
+			// The user can post, lets set the appropoate permission.
+			$context['PrivateTopics_post'] = allowedTo('can_set_topic_as_private');
 		}
 	}
+
+	// This is a new topic, lets see if the user can set it as private.
+	$context['PrivateTopics_post'] = allowedTo('can_set_topic_as_private');
 	/* PrivateTopics mod */
 
 	// Check if it's locked.  It isn't locked if no topic is specified.]]></add>
@@ -535,7 +521,7 @@
 				$ptUsers = PrivateTopics_getUsers($b['last_post']['topic']);
 
 			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptUsers && )!isset($ptUsers[$user_info['id']]))
+			if (!empty($ptUsers) && !isset($ptUsers[$user_info['id']]))
 				unset($context['boards'][$b['id']]['last_post']);
 		}
 	}
@@ -557,12 +543,7 @@
 			<add><![CDATA[$data = array();
 
 	/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
-
-	// This is just for safety
-	else
-		$canSeePrivateTopics = true;
+	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
 	/* PrivateTopics mod */
 
 	while ($row = $smcFunc['db_fetch_assoc']($request))
@@ -591,12 +572,7 @@
 			<add><![CDATA[$data = array();
 
 	/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
-
-	// This is just for safety
-	else
-		$canSeePrivateTopics = true;
+	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
 	/* PrivateTopics mod */
 
 	while ($row = $smcFunc['db_fetch_assoc']($request))
@@ -636,12 +612,7 @@
 			<add><![CDATA[$posts = array();
 
 	/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
-
-	// This is just for safety
-	else
-		$canSeePrivateTopics = true;
+	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
 	/* PrivateTopics mod */
 
 	while ($row = $smcFunc['db_fetch_assoc']($request))
@@ -674,12 +645,7 @@
 			<add><![CDATA[$posts = array();
 
 	/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
-
-	// This is just for safety
-	else
-		$canSeePrivateTopics = true;
+	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
 	/* PrivateTopics mod */
 
 	while ($row = $smcFunc['db_fetch_assoc']($request))
@@ -712,12 +678,7 @@
 			<add><![CDATA[$topics = array();
 
 	/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
-
-	// This is just for safety
-	else
-		$canSeePrivateTopics = true;
+	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
 	/* PrivateTopics mod */
 
 	while ($row = $smcFunc['db_fetch_assoc']($request))
@@ -742,11 +703,8 @@
 		<operation>
 			<search position="replace"><![CDATA[// Now show the subject box for this post.]]></search>
 			<add><![CDATA[/* Private Topics mod */
-	$pt = new PrivateTopics();
-	$ptBoard = $pt->doBoard($context['current_board']);
-	$ptCanSet = $pt->doPermissionsSet();
 
-	if (!empty($modSettings['PrivateTopics_enable']) && !empty($ptBoard) && $ptCanSet)
+	if (!empty($modSettings['PrivateTopics_enable']) && $context['PrivateTopics_post'])
 	{
 		echo '
 			<dt class="clear_left">
@@ -831,8 +789,7 @@ suggestMember();
 					{
 						global $user_info;
 						$ptTrue = false;
-						$pt = new PrivateTopics($board['last_post']['id']);
-						$ptCache = $pt->doGet();
+						$ptCache = PrivateTopics_getUsers($board['last_post']['topic']);
 
 						if (!empty($ptCache) && is_array($ptCache) && !allowedTo('can_always_see_private_topics'))
 						{
@@ -878,8 +835,7 @@ suggestMember();
 					{
 						global $user_info;
 						$ptTrue = false;
-						$pt = new PrivateTopics($board['last_post']['id']);
-						$ptCache = $pt->doGet();
+						$ptCache = PrivateTopics_getUsers($board['last_post']['topic']);
 
 						if (!empty($ptCache) && is_array($ptCache) && !allowedTo('can_always_see_private_topics'))
 						{
