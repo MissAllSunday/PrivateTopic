@@ -36,6 +36,7 @@ $txt['PrivateTopics_panel_desc'] = 'From Here you can set up the Private Topics 
 $txt['PrivateTopics_enable'] = 'Enable the Private Topics mod';
 $txt['PrivateTopics_enable_sub'] = 'This is the master setting, needs ot be on for the mod to work properly.';
 $txt['PrivateTopics_boards'] = 'Boards where you want to use topics as private';
+$txt['PrivateTopics_boards_sub'] = 'Select all boards where this mod will be active.';
 $txt['PrivateTopics_select_boards'] = 'Select the boards';
 $txt['PrivateTopics_redirect'] = 'I\'m sorry, you aren\'t allowed to see this topic.';
 $txt['PrivateTopics_redirect_message'] = 'This message belongs to a private topic.';

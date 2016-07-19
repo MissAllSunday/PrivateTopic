@@ -28,6 +28,7 @@
 function template_callback_PrivateTopics_boards()
 {
 	global $context, $txt;
+
 	if (!empty($context['boards']))
 	{
 		echo '
