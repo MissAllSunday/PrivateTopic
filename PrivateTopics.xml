@@ -3,31 +3,25 @@
 <modification xmlns="http://www.simplemachines.org/xml/modification" xmlns:smf="http://www.simplemachines.org/">
 	<id>Suki:PrivateTopics</id>
 	<name>Private Topics</name>
-	<version>1.1</version>
+	<version>1.2</version>
+
+	<file name="$sourcedir/Load.php">
+		<operation>
+			<search position="replace"><![CDATA[// Check first the integration, then the cookie, and last the session.]]></search>
+			<add><![CDATA[global $context;
+	if (!isset($context['PrivateTopic']))
+		$context['PrivateTopic'] = new PrivateTopics();
+
+	// Check first the integration, then the cookie, and last the session.]]></add>
+		</operation>
+	</file>
+
 	<file name="$sourcedir/Display.php">
 		<operation>
 			<search position="replace"><![CDATA[// Load the proper template and/or sub template.]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-	{
-		// Avoid the extra heat by checking the board first.
-		$ptCheckBoards = PrivateTopics_checkBoards($board);
-
-		if (!empty($ptCheckBoards))
-		{
-			// The next easiest thing to do is the permission.
-			if (!allowedTo('can_always_see_private_topics'))
-			{
-				// So, this board was selected, and the user don't have the permission, time to hit the server!
-					$ptUsers = PrivateTopics_getUsers($topic);
-
-				// Sorry, you aren't allowed to see this topic.
-				if (!empty($ptUsers) && empty($ptUsers[$user_info['id']]))
+			<add><![CDATA[// Sorry, you aren't allowed to see this topic.
+				if (!$context['PrivateTopic']->check($topic, $board))
 					fatal_lang_error('PrivateTopics_redirect', false);
-			}
-		}
-	}
-	/* PrivateTopics mod */
 
 	// Load the proper template and/or sub template.]]></add>
 		</operation>
@@ -35,91 +29,43 @@
 
 	<file name="$sourcedir/Who.php">
 		<operation>
-			<search position="replace"><![CDATA[// Show the topic's subject for each of the actions.
+			<search position="replace"><![CDATA[while ($row = $smcFunc['db_fetch_assoc']($result))
+		{
+			// Show the topic's subject for each of the actions.
 			foreach ($topic_ids[$row['id_topic']] as $k => $session_text)
 				$data[$k] = sprintf($session_text, $row['id_topic'], censorText($row['subject']));]]></search>
-			<add><![CDATA[// Show the topic's subject for each of the actions.
+			<add><![CDATA[$topicPrivacy = $context['PrivateTopic']->checkMultipleTopics($topic_ids);
+
+		while ($row = $smcFunc['db_fetch_assoc']($result))
+		{
+			// Show the topic's subject for each of the actions.
 			foreach ($topic_ids[$row['id_topic']] as $k => $session_text)
 			{
-				/* PrivateTopics mod */
-				if (!empty($modSettings['PrivateTopics_enable']))
-				{
-					// The next easiest thing to do is the permission.
-					if (!allowedTo('can_always_see_private_topics'))
-					{
-						// So, the user don't have the permission, time to hit the server!
-							$ptUsers = PrivateTopics_getUsers($k);
+				if(!$topicPrivacy[$k])
+					unset($data[$k]);
 
-						// Sorry, you aren't allowed to see this topic.
-						if (!empty($ptUsers) && empty($ptUsers[$user_info['id']]))
-							unset($data[$k]);
-					}
-				}
-
-				$data[$k] = sprintf($session_text, $row['id_topic'], censorText($row['subject']));]]></add>
+				$data[$k] = sprintf($session_text, $row['id_topic'], censorText($row['subject']));
+			}]]></add>
 		</operation>
 	</file>
 
 	<file name="$sourcedir/Profile-View.php">
 		<operation>
-			<search position="replace"><![CDATA[t.approved, m.body, m.smileys_enabled, m.subject, m.poster_time, m.id_topic, m.id_msg]]></search>
-			<add><![CDATA[t.approved, m.body, m.smileys_enabled, m.subject, m.poster_time, m.id_topic, m.id_msg, t.private_users]]></add>
-		</operation>
-		<operation>
-			<search position="replace"><![CDATA[// Start counting at the number of the first message displayed.]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
-	/* PrivateTopics mod */
-
-	// Start counting at the number of the first message displayed.]]></add>
-		</operation>
-		<operation>
 			<search position="replace"><![CDATA[// Censor....]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
-		{
-			// We have the encoded list so lets use it
-			$ptusers = PrivateTopics_decode($row['private_users']);
-
-			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
-				continue;
-		}
-		/* PrivateTopics mod */
+			<add><![CDATA[// Private topic mod.
+		if (!$context['PrivateTopic']->check($row['id_topic'], $row['id_board']))
+			continue;
 
 		// Censor....]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg,]]></search>
-			<add><![CDATA[b.id_board, b.name AS bname, c.id_cat, c.name AS cname, m.id_topic, m.id_msg, t.private_users,]]></add>
 		</operation>
 	</file>
 
 	<file name="$sourcedir/Printpage.php">
 		<operation>
 			<search position="replace"><![CDATA[// Whatever happens don't index this]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-	{
-		// Avoid the extra heat by checking the board first.
-		$ptCheckBoards = PrivateTopics_checkBoards($board_info['id']);
-
-		if (!empty($ptCheckBoards))
-		{
-			// The next easiest thing to do is the permission.
-			if (!allowedTo('can_always_see_private_topics'))
-			{
-				// So, this board was selected, and the user don't have the permission, time to hit the server!
-					$ptUsers = PrivateTopics_getUsers($topic);
-
-				// Sorry, you aren't allowed to see this topic.
-				if (!empty($ptUsers) && empty($ptUsers[$user_info['id']]))
-					fatal_lang_error('PrivateTopics_redirect', false);
-			}
-		}
-	}
-	/* PrivateTopics mod */
+			<add><![CDATA[// Sorry, you aren't allowed to see this topic.
+	if (!$context['PrivateTopic']->check($topic, $board_info['id']))
+		fatal_lang_error('PrivateTopics_redirect', false);
 
 	// Whatever happens don't index this.]]></add>
 		</operation>
@@ -127,105 +73,36 @@
 
 	<file name="$sourcedir/Recent.php">
 		<operation>
-			<search position="replace"><![CDATA[m.id_msg, m.subject, m.smileys_enabled, m.poster_time, m.body, m.id_topic, t.id_board, b.id_cat,]]></search>
-			<add><![CDATA[m.id_msg, m.subject, m.smileys_enabled, m.poster_time, m.body, m.id_topic, t.id_board, b.id_cat, t.private_users,]]></add>
-		</operation>
-
-		<operation>
 			<search position="replace"><![CDATA[$board_ids = array('own' => array(), 'any' => array());
 	while ($row = $smcFunc['db_fetch_assoc']($request))
 	{
 		// Censor everything.]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
-	/* PrivateTopics mod */
-
-	$board_ids = array('own' => array(), 'any' => array());
+			<add><![CDATA[$board_ids = array('own' => array(), 'any' => array());
 	while ($row = $smcFunc['db_fetch_assoc']($request))
 	{
-		/* PrivateTopics mod */
-		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
-		{
-			// We have the encoded list so lets use it
-			$ptusers = PrivateTopics_decode($row['private_users']);
-
-			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
-				continue;
-		}
-		/* PrivateTopics mod */
+		// Sorry, you aren't allowed to see this topic.
+		if (!$context['PrivateTopic']->check($row['id_topic'], $row['id_board']))
+			continue;
 
 		// Censor everything.]]></add>
 		</operation>
 
 		<operation>
-			<search position="replace"><![CDATA[ms.id_topic, t.id_board, b.name AS bname,]]></search>
-			<add><![CDATA[ms.id_topic, t.id_board, b.name AS bname, t.private_users,]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[while ($row = $smcFunc['db_fetch_assoc']($request))
-	{
-		if ($row['id_poll'] > 0 && $modSettings['pollMode'] == '0')
-			continue;]]></search>
-			<add><![CDATA[	/* PrivateTopics mod */
-	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
-	/* PrivateTopics mod */
-
-	while ($row = $smcFunc['db_fetch_assoc']($request))
-	{
-		if ($row['id_poll'] > 0 && $modSettings['pollMode'] == '0')
+			<search position="replace"><![CDATA[if ($row['id_poll'] > 0 && $modSettings['pollMode'] == '0')]]></search>
+			<add><![CDATA[// Sorry, you aren't allowed to see this topic.
+		if (!$context['PrivateTopic']->check($row['id_topic'], $row['id_board']))
 			continue;
 
-		/* PrivateTopics mod */
-		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
-		{
-			// Avoid the extra heat by checking the board first.
-			$ptCheckBoards = PrivateTopics_checkBoards($row['id_board']);
-
-			if (!empty($ptCheckBoards))
-			{
-				// We have the encoded list so lets use it
-				$ptusers = PrivateTopics_decode($row['private_users']);
-
-				// Sorry, you aren't allowed to see this topic.
-				if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
-					continue;
-			}
-		}
-		/* PrivateTopics mod */]]></add>
+		if ($row['id_poll'] > 0 && $modSettings['pollMode'] == '0')]]></add>
 		</operation>
 	</file>
 
 	<file name="$sourcedir/Subs-Recent.php">
 		<operation>
-			<search position="replace"><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg,]]></search>
-			<add><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg, t.private_users,]]></add>
-		</operation>
-		<operation>
-			<search position="replace"><![CDATA[$posts = array();
-	while ($row = $smcFunc['db_fetch_assoc']($request))
-	{
-		// Censor the subject and post for the preview ;).]]></search>
-			<add><![CDATA[$posts = array();
-
-	/* PrivateTopics mod */
-	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
-	/* PrivateTopics mod */
-
-	while ($row = $smcFunc['db_fetch_assoc']($request))
-	{
-		/* PrivateTopics mod */
-		if (!$canSeePrivateTopics && !empty($row['private_users']))
-		{
-			// We have the encoded list so lets use it
-			$ptusers = PrivateTopics_decode($row['private_users']);
-
-			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
-				continue;
-		}
-		/* PrivateTopics mod */
+			<search position="replace"><![CDATA[// Censor the subject and post for the preview ;).]]></search>
+			<add><![CDATA[// Sorry, you aren't allowed to see this topic.
+		if (!$context['PrivateTopic']->check($row['id_topic'], $row['id_board']))
+			continue;
 
 		// Censor the subject and post for the preview ;).]]></add>
 		</operation>
@@ -233,22 +110,10 @@
 
 	<file name="$sourcedir/Search.php">
 		<operation>
-			<search position="replace"><![CDATA[m.id_msg, m.subject, m.poster_name, m.poster_email, m.poster_time, m.id_member,]]></search>
-			<add><![CDATA[m.id_msg, m.subject, m.poster_name, m.poster_email, m.poster_time, m.id_member, t.private_users,]]></add>
-		</operation>
-		<operation>
 			<search position="replace"><![CDATA[// Can't have an empty subject can we?]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-	if (empty($canSeePrivateTopics) && !empty($message['private_users']))
-	{
-		// We have the encoded list so lets use it
-		$ptusers = PrivateTopics_decode($message['private_users']);
-
-		// Sorry, you aren't allowed to see this topic.
-		if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
-			return false;
-	}
-	/* PrivateTopics mod */
+			<add><![CDATA[// Sorry, you aren't allowed to see this topic.
+	if (!$context['PrivateTopic']->check($message['id_topic'], $message['id_board']))
+		return false;
 
 	// Can't have an empty subject can we?]]></add>
 		</operation>
@@ -257,159 +122,75 @@
 	<file name="$sourcedir/Post.php">
 		<operation>
 			<search position="after"><![CDATA[// Check if it's locked.  It isn't locked if no topic is specified.]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']) && !empty($topic) && !empty($board))
+			<add><![CDATA[// PrivateTopics mod.
+	$context['pt_mod'] = array();
+	$context['pt_enable'] = $context['PrivateTopic']->checkBoards($board) && allowedTo('can_set_topic_as_private');
+	$context['pt_groups'] = $context['PrivateTopic']->getSelectedGroups();
+
+	// Sorry, you aren't allowed to respond ot this topic.
+	if (!empty($topic))
 	{
-		// Avoid the extra heat by checking the board first.
-		$ptCheckBoards = PrivateTopics_checkBoards($board);
+		if (!$context['PrivateTopic']->check($topic, $board))
+			fatal_lang_error('PrivateTopics_redirect', false);
 
-		if (!empty($ptCheckBoards))
-		{
-			// The next easiest thing to do is the permission.
-			if (!allowedTo('can_always_see_private_topics'))
-			{
-				// So, this board was selected, and the user don't have the permission, time to hit the server!
-					$ptUsers = PrivateTopics_getUsers($topic);
-
-				// Sorry, you aren't allowed to post on this topic.
-				if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
-					fatal_lang_error('PrivateTopics_redirect', false);
-			}
-
-			// The user can post, lets set the appropoate permission.
-			$context['PrivateTopics_post'] = allowedTo('can_set_topic_as_private');
-		}
+		// User can reply but replies don't need to set any extra info.
+		$context['pt_enable'] = false;
 	}
 
-	// This is a new topic, lets see if the user can set it as private.
-	$context['PrivateTopics_post'] = allowedTo('can_set_topic_as_private');
-	/* PrivateTopics mod */
+	// New topic, get the needed data.
+	else
+		$context['pt_mod'] = $context['PrivateTopic']->getTopicInfo($topic);
+	// PrivateTopics mod.
 
-	// Check if it's locked.  It isn't locked if no topic is specified.]]></add>
+	// Check if it's locked.  It isn't locked if no topic is specified.// Check if it's locked.  It isn't locked if no topic is specified.]]></add>
 		</operation>
 		<operation>
 			<search position="replace"><![CDATA[// Set the destinaton.]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
-		$context['ptenable'] = false;
-		$context['ptusers'] = array();
-		$context['ptusers_auto'] =false;
+			<add><![CDATA[// PrivateTopics mod.
+		$context['pt_mod'] = array();
+		$context['pt_enable'] = $context['PrivateTopic']->checkBoards($board) && allowedTo('can_set_topic_as_private');
+		$context['pt_groups'] = $context['PrivateTopic']->getSelectedGroups();
 
-		if (!empty($topic) && !empty($board) && !empty($modSettings['PrivateTopics_enable']) && allowedTo('can_set_topic_as_private'))
-		{
-			// Avoid the extra heat by checking the board first.
-			$ptCheckBoards = PrivateTopics_checkBoards($board);
-
-			if (!empty($ptCheckBoards))
-			{
-					$ptUsers = PrivateTopics_getUsers($topic);
-					$context['ptenable'] = !empty($ptUsers);
-					$context['ptusers'] = $ptUsers;
-					$context['ptusers_auto'] = $ptUsers;
-			}
-		}
-		/* PrivateTopics mod */
+		if (!empty($topic) && $context['pt_enable'])
+			$context['pt_mod'] = $context['PrivateTopic']->getTopicInfo($topic);
+		// PrivateTopics mod.
 
 		// Set the destinaton.]]></add>
 		</operation>
 		<operation>
+			<search position="replace"><![CDATA[// Previewing an edit?]]></search>
+			<add><![CDATA[// PrivateTopic mod.
+		if (isset($_POST['ptgroups']))
+		{
+			$context['pt_enable'] = $context['PrivateTopic']->checkBoards($board) && allowedTo('can_set_topic_as_private');
+			$context['pt_groups'] = $context['PrivateTopic']->getSelectedGroups();
+			$context['pt_mod'] = $context['PrivateTopic']->membergroups($_POST['ptgroups']);
+		}
+
+		// Previewing an edit?]]></add>
+		</operation>
+		<operation>
 			<search position="replace"><![CDATA[// This is an already existing message. Edit it.]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
+			<add><![CDATA[// PrivateTopics mod.
 	$ptsave = false;
-	$ptusers = array();
+	$ptGroups = array();
 
-	if (!empty($modSettings['PrivateTopics_enable']) && !empty($_REQUEST['ptenable']))
+	if (isset($_POST['ptgroups']))
 	{
-		/* Do they used the auto-suggest thing? */
-		if (!empty($_POST['recipient_to']) && empty($_POST['ptusers']))
-		{
-			$ptusers = explode(',', trim($_POST['ptusers']));
-
-			foreach ($ptusers as $k => $v)
-			{
-				if (empty($v))
-					unset($ptusers[$k]);
-
-				else
-					$ptusers[$k] = (int) trim($v);
-			}
-
-			/* Let's include the topic creator into the array */
-			$ptusers[] = $user_info['id'];
-
-			// Avoid duplicates.
-			$ptusers = array_unique($ptusers);
-		}
-
-		/* No? then do it the old way instead */
-		elseif(!empty($_POST['ptusers']) && empty($_POST['recipient_to']))
-		{
-			$usersToLoad = array();
-
-			$ptusers = explode(',', trim($_POST['ptusers']));
-
-			foreach ($ptusers as $k => $v)
-			{
-				if (empty($v))
-					unset($ptusers[$k]);
-
-				else
-					$ptusers[] = (int) trim($v);
-			}
-		}
-
-		/* If there was no users, then use the topic starter */
-		else
-			$ptusers = array($user_info['id']);
-
-		/* Let's send a pm to every member, we dont' need to to send the pm to the topic author */
-		$pmToSend = $ptusers;
-		unset($pmToSend[$user_info['id']]);
-
+		$ptGroups = array();
+		foreach ($_POST['ptgroups'] as $k => $v)
+				$ptGroups[] = (int) trim($v);
 		$ptsave = true;
 	}
 
 	// This is an already existing message. Edit it.]]></add>
 		</operation>
-
 		<operation>
-			<search position="replace"><![CDATA[modifyPost($msgOptions, $topicOptions, $posterOptions);]]></search>
-			<add><![CDATA[		/* Private Topics mod */
-		if (!empty($ptsave))
-			PrivateTopics_doSave($topicOptions['id'], $ptUsers);
+			<search position="replace"><![CDATA[// Marking read should be done even for editing messages]]></search>
+			<add><![CDATA[if (!empty($ptsave) && !empty($ptGroups))
+		$context['PrivateTopic']->doSave($topicOptions['id'], $ptGroups);
 
-		modifyPost($msgOptions, $topicOptions, $posterOptions);]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[if (isset($topicOptions['id']))
-			$topic = $topicOptions['id'];]]></search>
-			<add><![CDATA[if (isset($topicOptions['id']))
-			$topic = $topicOptions['id'];
-
-		if (!empty($ptsave) && !empty($ptUsers))
-		{
-			PrivateTopics_doSave($topic, $ptUsers);
-
-			/* Send the pm */
-			if (!empty($pmToSend))
-			{
-				global $scripturl;
-
-				$recipients = array(
-					'bcc' => array(),
-					'to' => $pmToSend
-				);
-				$from = array(
-						'id' => $user_info['id'],
-						'name' => $user_info['name'],
-						'username' => $user_info['username'],
-					);
-				$ptTopicUrl = $scripturl . '?topic=' . $topic . '.0';
-				$ptMessage = sprintf($txt['PrivateTopics_pm_message'], $ptTopicUrl, $user_info['username']);
-
-				sendpm($recipients, $txt['PrivateTopics_pm_subject'], $ptMessage, false, $from);
-			}
-		}]]></add>
+	// Marking read should be done even for editing messages]]></add>
 		</operation>
 	</file>
 
@@ -418,500 +199,188 @@
 			<search position="replace"><![CDATA[$context['categories'] = getBoardIndex($boardIndexOptions);]]></search>
 			<add><![CDATA[$context['categories'] = getBoardIndex($boardIndexOptions);
 
-/* PrivateTopics mod */
-	$ptUsers = array();
-	if (!empty($modSettings['PrivateTopics_enable']) && !empty($context['categories']) && !allowedTo('can_always_see_private_topics'))
+	// PrivateTopics mod.
+	if (!empty($context['categories']))
 		foreach ($context['categories'] as $c)
 			foreach ($c['boards'] as $b)
 			{
-				$ptCheckBoards = PrivateTopics_checkBoards($b['id']);
-
-				// We're doing lots of loops so try and check things as soon as possible.
-				if (empty($ptCheckBoards))
-					continue;
-
 				if (!empty($b['last_post']['topic']))
-				{
-					$ptUsers = PrivateTopics_getUsers($b['last_post']['topic']);
-
-					if (!empty($ptUsers) && !isset($ptUsers[$user_info['id']]))
+					if (!$context['PrivateTopic']->check($b['last_post']['topic'], $b['id']))
 						unset($context['categories'][$c['id']]['boards'][$b['id']]['last_post']);
-				}
 
-				/* We do the same for children boards */
+				// We do the same for children boards
 				if (!empty($b['children']))
 					foreach ($b['children'] as $ch)
-					{
-						$ptCheckBoardsChildren = PrivateTopics_checkBoards($ch['id']);
-
-						// We're doing lots of loops so try and check things as soon as possible.
-						if (empty($ptCheckBoardsChildren))
-							continue;
-
 						if(!empty($ch['last_post']['topic']))
-						{
-							$ptUsers = PrivateTopics_getUsers($ch['last_post']['topic']);
-
-							if (!empty($ptUsers) && !isset($ptUsers[$user_info['id']]))
+							if (!$context['PrivateTopic']->check($ch['last_post']['topic'], $ch['id']))
 								unset($context['categories'][$c['id']]['boards'][$b['id']]['children'][$ch['id']]);
-						}
-					}
 			}
-	/* PrivateTopics mod */]]></add>
+	// PrivateTopics mod.]]></add>
 		</operation>
 	</file>
 
 	<file name="$sourcedir/MessageIndex.php">
 		<operation>
-			<search position="replace"><![CDATA[t.id_topic, t.num_replies, t.locked, t.num_views, t.is_sticky, t.id_poll, t.id_previous_board,]]></search>
-			<add><![CDATA[t.id_topic, t.num_replies, t.locked, t.num_views, t.is_sticky, t.id_poll, t.id_previous_board, t.private_users,]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[// Begin 'printing' the message index for current board.
-		while ($row = $smcFunc['db_fetch_assoc']($result))
-		{
-			if ($row['id_poll'] > 0 && $modSettings['pollMode'] == '0')
+			<search position="replace"><![CDATA[if ($row['id_poll'] > 0 && $modSettings['pollMode'] == '0')
 				continue;]]></search>
-			<add><![CDATA[	/* PrivateTopics mod */
-	if (!empty($modSettings['PrivateTopics_enable']))
-	{
-		// Oh boy! the joy of doing hackish things...
-		$canSeePrivateTopics = allowedTo('can_always_see_private_topics');
-	}
-
-	// This is just for safety
-	else
-		$canSeePrivateTopics = true;
-	/* PrivateTopics mod */
-
-		// Begin 'printing' the message index for current board.
-		while ($row = $smcFunc['db_fetch_assoc']($result))
-		{
-			if ($row['id_poll'] > 0 && $modSettings['pollMode'] == '0')
+			<add><![CDATA[if ($row['id_poll'] > 0 && $modSettings['pollMode'] == '0')
 				continue;
 
-		/* PrivateTopics mod */
-		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
-		{
-			// We have the encoded list so lets use it
-			$ptusers = PrivateTopics_decode($row['private_users']);
-
-			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
+			// PrivateTopics mod.
+			if (!$context['PrivateTopic']->check($row['id_topic'], $board))
 				continue;
-		}
-		/* PrivateTopics mod */]]></add>
+			// PrivateTopics mod.]]></add>
 		</operation>
 
 		<operation>
 			<search position="replace"><![CDATA[// If there are children, but no topics and no ability to post topics...]]></search>
-			<add><![CDATA[/* PrivateTopics mod */
+			<add><![CDATA[// PrivateTopics mod.
 	foreach ($context['boards'] as $b)
-	{
-		// Avoid the extra heat by checking the board first.
-		$ptCheckBoards = PrivateTopics_checkBoards($board);
-
-		if (empty($ptCheckBoards))
-			continue;
-
 		if (!empty($b['last_post']))
-		{
-			// So, this board was selected, and the user don't have the permission, time to hit the server!
-				$ptUsers = PrivateTopics_getUsers($b['last_post']['topic']);
-
-			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptUsers) && !isset($ptUsers[$user_info['id']]))
+			if (!$context['PrivateTopic']->check($b['last_post']['topic'], $b['id']))
 				unset($context['boards'][$b['id']]['last_post']);
-		}
-	}
-	/* PrivateTopics mod */
+	// PrivateTopics mod.
 
 	// If there are children, but no topics and no ability to post topics...]]></add>
+		</operation>
+
+		<operation>
+			<search position="replace"><![CDATA['unapproved_posts' => $row['unapproved_posts'],]]></search>
+			<add><![CDATA['unapproved_posts' => $row['unapproved_posts'],
+				'can_be_seen_by' => $context['PrivateTopic']->getMessageIndexGroups($row['id_topic']),]]></add>
 		</operation>
 	</file>
 
 	<file name="$sourcedir/News.php">
 		<operation>
-			<search position="replace"><![CDATA[m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.modified_time,]]></search>
-			<add><![CDATA[m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.modified_time, t.private_users,]]></add>
-		</operation>
-		<operation>
-			<search position="replace"><![CDATA[$data = array();
-	while ($row = $smcFunc['db_fetch_assoc']($request))
-	{]]></search>
-			<add><![CDATA[$data = array();
-
-	/* PrivateTopics mod */
-	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
-	/* PrivateTopics mod */
-
-	while ($row = $smcFunc['db_fetch_assoc']($request))
-	{
-		/* PrivateTopics mod */
-		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
-		{
-			// We have the encoded list so lets use it
-			$ptusers = PrivateTopics_decode($row['private_users']);
-
-			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
-				continue;
-		}
-		/* PrivateTopics mod */]]></add>
-		</operation>
-		<operation>
-			<search position="replace"><![CDATA[m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.id_topic, t.id_board,]]></search>
-			<add><![CDATA[m.smileys_enabled, m.poster_time, m.id_msg, m.subject, m.body, m.id_topic, t.id_board, t.private_users,]]></add>
-		</operation>
-		<operation>
-			<search position="replace"><![CDATA[$data = array();
+			<search position="replace"><![CDATA[}
+	$data = array();
 	while ($row = $smcFunc['db_fetch_assoc']($request))
 	{
 		// Limit the length of the message, if the option is set.]]></search>
-			<add><![CDATA[$data = array();
-
-	/* PrivateTopics mod */
-	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
-	/* PrivateTopics mod */
-
+			<add><![CDATA[}
+	$data = array();
 	while ($row = $smcFunc['db_fetch_assoc']($request))
 	{
-		/* PrivateTopics mod */
-		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
-		{
-			// We have the encoded list so lets use it
-			$ptusers = PrivateTopics_decode($row['private_users']);
-
-			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
-				continue;
-		}
-		/* PrivateTopics mod */
+		if (!$context['PrivateTopic']->check($row['id_topic'], $row['id_board']))
+			continue;
 
 		// Limit the length of the message, if the option is set.]]></add>
 		</operation>
-	</file>
-
-	<file name="$boarddir/SSI.php">
 		<operation>
-			<search position="before"><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg, m.id_board, b.name AS board_name,]]></search>
-			<add><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg, m.id_board, b.name AS board_name, t.private_users,]]></add>
-		</operation>
-		<operation>
-			<search position="before"><![CDATA[INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)]]></search>
-			<add><![CDATA[
-			LEFT JOIN {db_prefix}topics AS t ON (t.id_topic = m.id_topic)]]></add>
-		</operation>
-
-		<operation>
-			<search position="before"><![CDATA[$posts = array();
+			<search position="replace"><![CDATA[);
+	$data = array();
 	while ($row = $smcFunc['db_fetch_assoc']($request))
 	{
-		$row['body'] = parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']);]]></search>
-			<add><![CDATA[$posts = array();
-
-	/* PrivateTopics mod */
-	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
-	/* PrivateTopics mod */
-
+		// Limit the length of the message, if the option is set.]]></search>
+			<add><![CDATA[);
+	$data = array();
 	while ($row = $smcFunc['db_fetch_assoc']($request))
 	{
-		/* PrivateTopics mod */
-		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
-		{
-			// We have the encoded list so lets use it
-			$ptusers = PrivateTopics_decode($row['private_users']);
+		if (!$context['PrivateTopic']->check($row['id_topic'], $row['id_board']))
+			continue;
 
-			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
-				continue;
-		}
-		/* PrivateTopics mod */
-
-		$row['body'] = parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']);]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[m.poster_time, ms.subject, m.id_topic, m.id_member, m.id_msg, b.id_board, b.name AS board_name, t.num_replies, t.num_views,]]></search>
-			<add><![CDATA[m.poster_time, ms.subject, m.id_topic, m.id_member, m.id_msg, b.id_board, b.name AS board_name, t.num_replies, t.num_views, t.private_users,]]></add>
-		</operation>
-
-		<operation>
-			<search position="after"><![CDATA[$posts = array();
-	while ($row = $smcFunc['db_fetch_assoc']($request))
-	{
-		$row['body'] = strip_tags(strtr(parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']), array('<br />' => '&#10;')));]]></search>
-			<add><![CDATA[$posts = array();
-
-	/* PrivateTopics mod */
-	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
-	/* PrivateTopics mod */
-
-	while ($row = $smcFunc['db_fetch_assoc']($request))
-	{
-		/* PrivateTopics mod */
-		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
-		{
-			// We have the encoded list so lets use it
-			$ptusers = PrivateTopics_decode($row['private_users']);
-
-			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
-				continue;
-		}
-		/* PrivateTopics mod */
-
-		$row['body'] = strip_tags(strtr(parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']), array('<br />' => '&#10;')));]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[SELECT m.subject, m.id_topic, t.num_views, t.num_replies]]></search>
-			<add><![CDATA[SELECT m.subject, m.id_topic, t.num_views, t.num_replies, t.private_users]]></add>
-		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[$topics = array();
-	while ($row = $smcFunc['db_fetch_assoc']($request))
-	{
-		censorText($row['subject']);]]></search>
-			<add><![CDATA[$topics = array();
-
-	/* PrivateTopics mod */
-	$canSeePrivateTopics = !empty($modSettings['PrivateTopics_enable']) ? allowedTo('can_always_see_private_topics') = true;
-	/* PrivateTopics mod */
-
-	while ($row = $smcFunc['db_fetch_assoc']($request))
-	{
-		/* PrivateTopics mod */
-		if (empty($canSeePrivateTopics) && !empty($row['private_users']))
-		{
-			// We have the encoded list so lets use it
-			$ptusers = PrivateTopics_decode($row['private_users']);
-
-			// Sorry, you aren't allowed to see this topic.
-			if (!empty($ptusers) && !isset($ptUsers[$user_info['id']]))
-				continue;
-		}
-		/* PrivateTopics mod */
-
-		censorText($row['subject']);]]></add>
+		// Limit the length of the message, if the option is set.]]></add>
 		</operation>
 	</file>
 
 	<file name="$themedir/Post.template.php">
 		<operation>
 			<search position="replace"><![CDATA[// Now show the subject box for this post.]]></search>
-			<add><![CDATA[/* Private Topics mod */
-
-	if (!empty($modSettings['PrivateTopics_enable']) && $context['PrivateTopics_post'])
+			<add><![CDATA[// Private Topics mod
+	if (!empty($context['pt_mod']) && !empty($context['pt_enable']))
 	{
-		echo '
-			<dt class="clear_left">
-				<span id="caption_privatetopics">', $txt['PrivateTopics_post_enable'] , ':</span>
-			</dt>
-			<dd>
-				<input type="checkbox" id="ptenable" name="ptenable"', !empty($context['ptenable']) ? ' checked="checked"' : '', ' class="input_check" />
-			</dd>';
-
 		echo '
 			<dt class="clear_left">
 				<span id="caption_privatetopics">', $txt['PrivateTopics_post_message'] , ':</span>
 			</dt>
-			<dd>
-				<input type="text" name="ptusers" id="ptusers" tabindex="', $context['tabindex']++, '" ', !isset($context['ptusers']) ? '' : ' value="' . $context['ptusers'] . '"', ' size="40" maxlength="80" class="input_text" />
-			<div id="to_item_list_container"></div></dd>';
+			<dd>';
+
+		foreach ($context['pt_groups'] as $gId => $gName)
+			echo '
+					<input type="checkbox" name="ptgroups[]" value="', $gId ,'"> ', $gName ,'<br>';
+
+		echo '<br>
+			</dd>';
 	}
 
 	// Now show the subject box for this post.]]></add>
 		</operation>
-
-		<operation>
-			<search position="replace"><![CDATA[}
-
-// The template for the spellchecker.]]></search>
-			<add><![CDATA[echo '
-		<script type="text/javascript" src="', $settings['default_theme_url'], '/scripts/PersonalMessage.js?fin20"></script>
-		<script type="text/javascript" src="', $settings['default_theme_url'], '/scripts/suggest.js?fin20"></script>
-		<script type="text/javascript">
-
-function suggestMember()
-{
-	omemberSuggest = new smc_AutoSuggest({
-		sSelf: \'omemberSuggest\',
-		sSessionId: \'', $context['session_id'], '\',
-		sSessionVar: \'', $context['session_var'], '\',
-		sControlId: \'ptusers\',
-		sSearchType: \'member\',
-		sSearchType: \'member\',
-		sPostName: \'recipient_to\',
-		sURLMask: \'action=profile;u=%item_id%\',
-		sTextDeleteItem: \'', $txt['autosuggest_delete_item'], '\',
-		bItemList: true,
-		sItemListContainerId: \'to_item_list_container\',';
-	if (!empty($context['ptusers']))
-	{
-		echo '
-		aListItems: [';
-		$i = 0;
-		foreach ($context['ptusers_auto'] as $id => $member)
-			echo '
-					{
-						sItemId: ', JavaScriptEscape($id), ',
-						sItemName: ', JavaScriptEscape($member), '
-					}', $i++ == count($context['ptusers_auto']) - 1 ? '' : ',';
-
-		echo '
-				],';
-	}
-echo '
-	});
-}
-suggestMember();
-</script>';
-
-}
-
-// The template for the spellchecker.]]></add>
-		</operation>
 	</file>
-
-	<file name="$themedir/BoardIndex.template.php">
-		<operation>
-			<search position="replace"><![CDATA[if (!empty($board['last_post']['id']))
-					echo '
-						<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'] , '<br />
-						', $txt['in'], ' ', $board['last_post']['link'], '<br />
-						', $txt['on'], ' ', $board['last_post']['time'],'
-						</p>';]]></search>
-			<add><![CDATA[if (!empty($board['last_post']['id']))
-					if (!empty($modSettings['PrivateTopics_enable']))
-					{
-						global $user_info;
-						$ptTrue = false;
-						$ptCache = PrivateTopics_getUsers($board['last_post']['topic']);
-
-						if (!empty($ptCache) && is_array($ptCache) && !allowedTo('can_always_see_private_topics'))
-						{
-							if (!in_array($user_info['id'], $ptCache))
-								echo '
-							<p>', !empty($modSettings['PrivateTopics_boardindex_message']) ? $modSettings['PrivateTopics_boardindex_message'] : PrivateTopics::doTools()->getText('boardindex_message_default') ,'</p>';
-
-							else
-								echo '
-								<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
-								', $txt['in'], ' ', $board['last_post']['link'], '<br />
-								', $txt['on'], ' ', $board['last_post']['time'],'
-								</p>';
-						}
-
-						else
-							echo '
-							<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
-							', $txt['in'], ' ', $board['last_post']['link'], '<br />
-							', $txt['on'], ' ', $board['last_post']['time'],'
-							</p>';
-					}
-
-					else
-						echo '
-						<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
-						', $txt['in'], ' ', $board['last_post']['link'], '<br />
-						', $txt['on'], ' ', $board['last_post']['time'],'
-						</p>';]]></add>
-		</operation>
-	</file>
-
 	<file name="$themedir/MessageIndex.template.php">
 		<operation>
-			<search position="replace"><![CDATA[if (!empty($board['last_post']['id']))
-				echo '
-						<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
-						', $txt['in'], ' ', $board['last_post']['link'], '<br />
-						', $txt['on'], ' ', $board['last_post']['time'],'
-						</p>';]]></search>
-			<add><![CDATA[if (!empty($board['last_post']['id']))
-					if (!empty($modSettings['PrivateTopics_enable']))
-					{
-						global $user_info;
-						$ptTrue = false;
-						$ptCache = PrivateTopics_getUsers($board['last_post']['topic']);
+			<search position="replace"><![CDATA[// Show a "select all" box for quick moderation?
+			if (empty($context['can_quick_mod']))]]></search>
+			<add><![CDATA[echo '<th scope="col" width="14%">', $txt['PrivateTopics_can_bee_seen_by'] ,'</th>';
 
-						if (!empty($ptCache) && is_array($ptCache) && !allowedTo('can_always_see_private_topics'))
-						{
-							if (!in_array($user_info['id'], $ptCache))
-								echo '
-							<p>', !empty($modSettings['PrivateTopics_boardindex_message']) ? $modSettings['PrivateTopics_boardindex_message'] : PrivateTopics::doTools()->getText('boardindex_message_default') ,'</p>';
-
-							else
-								echo '
-								<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
-								', $txt['in'], ' ', $board['last_post']['link'], '<br />
-								', $txt['on'], ' ', $board['last_post']['time'],'
-								</p>';
-						}
-
-						else
-							echo '
-							<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
-							', $txt['in'], ' ', $board['last_post']['link'], '<br />
-							', $txt['on'], ' ', $board['last_post']['time'],'
-							</p>';
-					}
-
-					else
-						echo '
-						<p><strong>', $txt['last_post'], '</strong>  ', $txt['by'], ' ', $board['last_post']['member']['link'], '<br />
-						', $txt['in'], ' ', $board['last_post']['link'], '<br />
-						', $txt['on'], ' ', $board['last_post']['time'],'
-						</p>';]]></add>
+			// Show a "select all" box for quick moderation?
+			if (empty($context['can_quick_mod']))]]></add>
+		</operation>
+		<operation>
+			<search position="replace"><![CDATA[<td class="lastpost ', $alternate_class, '">]]></search>
+			<add><![CDATA[<td class="pt ', $color_class, '">
+						', (!empty($topic['can_be_seen_by']['groups']) ? implode('<br>', $topic['can_be_seen_by']['groups']) : $txt['PrivateTopics_anyone']) , '
+					</td>
+					<td class="lastpost ', $alternate_class, '">]]></add>
 		</operation>
 	</file>
-
 	<file name="$boarddir/SSI.php">
 		<operation>
-			<search position="replace"><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg, m.id_board, b.name AS board_name,]]></search>
-			<add><![CDATA[m.poster_time, m.subject, m.id_topic, m.id_member, m.id_msg, m.id_board, b.name AS board_name, pt.topic_id, pt.users,]]></add>
-		</operation>
+			<search position="replace"><![CDATA[while ($row = $smcFunc['db_fetch_assoc']($request))
+	{
+		$row['body'] = parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']);]]></search>
+			<add><![CDATA[while ($row = $smcFunc['db_fetch_assoc']($request))
+	{
+		if (!$context['PrivateTopic']->check($row['id_topic'], $row['id_board']))
+			continue;
 
-		<operation>
-			<search position="replace"><![CDATA[INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)]]></search>
-			<add><![CDATA[INNER JOIN {db_prefix}boards AS b ON (b.id_board = m.id_board)
-			LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)]]></add>
+		$row['body'] = parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']);]]></add>
 		</operation>
+		<operation>
+			<search position="replace"><![CDATA[$row['body'] = strip_tags(strtr(parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']), array('<br />' => '&#10;')));]]></search>
+			<add><![CDATA[if (!$context['PrivateTopic']->check($row['id_topic'], $row['id_board']))
+			continue;
 
-		<operation>
-			<search position="replace"><![CDATA[' . (empty($query_where) ? '' : 'AND ' . $query_where) . ']]></search>
-			<add><![CDATA[' . (empty($query_where) ? '' : 'AND ' . $query_where) . '
-		'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? (empty($query_where) ? '' : 'AND').' (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+		$row['body'] = strip_tags(strtr(parse_bbc($row['body'], $row['smileys_enabled'], $row['id_msg']), array('<br />' => '&#10;')));]]></add>
 		</operation>
+		<operation>
+			<search position="replace"><![CDATA[while ($row = $smcFunc['db_fetch_assoc']($request))
+	{
+		censorText($row['subject']);]]></search>
+			<add><![CDATA[while ($row = $smcFunc['db_fetch_assoc']($request))
+	{
+		if (!$context['PrivateTopic']->check($row['id_topic']))
+			continue;
 
-		<operation>
-			<search position="replace"><![CDATA[m.poster_time, ms.subject, m.id_topic, m.id_member, m.id_msg, b.id_board, b.name AS board_name, t.num_replies, t.num_views,]]></search>
-			<add><![CDATA[m.poster_time, ms.subject, m.id_topic, m.id_member, m.id_msg, b.id_board, b.name AS board_name, t.num_replies, t.num_views, pt.topic_id, pt.users,]]></add>
+		censorText($row['subject']);]]></add>
 		</operation>
+		<operation>
+			<search position="replace"><![CDATA[$boardsAllowed = boardsAllowedTo('poll_view');]]></search>
+			<add><![CDATA[if (!$context['PrivateTopic']->check($topic))
+		return array();
 
-		<operation>
-			<search position="replace"><![CDATA[WHERE t.id_last_msg >= {int:min_message_id}]]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = t.id_topic)
-		WHERE t.id_last_msg >= {int:min_message_id}
-			'. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .']]></add>
+	$boardsAllowed = boardsAllowedTo('poll_view');]]></add>
 		</operation>
 		<operation>
-			<search position="replace"><![CDATA[SELECT m.subject, m.id_topic, t.num_views, t.num_replies]]></search>
-			<add><![CDATA[SELECT m.subject, m.id_topic, t.num_views, t.num_replies, pt.topic_id, pt.users]]></add>
-		</operation>
+			<search position="replace"><![CDATA[// If we want to limit the length of the post.]]></search>
+			<add><![CDATA[if (!$context['PrivateTopic']->check($row['id_topic']))
+			continue;
 
-		<operation>
-			<search position="replace"><![CDATA[WHERE {query_wanna_see_board}' . ($modSettings['postmod_active'] ? ']]></search>
-			<add><![CDATA[LEFT JOIN {db_prefix}private_topics AS pt ON (pt.topic_id = m.id_topic)
-		WHERE {query_wanna_see_board}' . ($modSettings['postmod_active'] ? ']]></add>
+		// If we want to limit the length of the post.]]></add>
 		</operation>
-
 		<operation>
-			<search position="replace"><![CDATA[ORDER BY t.num_' . ($type != 'replies' ? 'views' : 'replies') . ' DESC]]></search>
-			<add><![CDATA['. (!empty($modSettings['PrivateTopics_enable']) && !allowedTo('can_always_see_private_topics') ? 'AND (pt.users IS NULL OR FIND_IN_SET("'. ($user_info['id']) .'", pt.users))' : '') .'
-		ORDER BY t.num_' . ($type != 'replies' ? 'views' : 'replies') . ' DESC]]></add>
+			<search position="replace"><![CDATA[// Check if we've already come by an event linked to this same topic with the same title... and don't display it if we have.]]></search>
+			<add><![CDATA[if (!$context['PrivateTopic']->check($row['id_topic']))
+			continue;
+
+		// Check if we've already come by an event linked to this same topic with the same title... and don't display it if we have.]]></add>
+		</operation>
+		<operation>
+			<search position="replace"><![CDATA[$filename = preg_replace('~&amp;#(\\d{1,7}|x[0-9a-fA-F]{1,6});~', '&#\\1;', htmlspecialchars($row['filename']));]]></search>
+			<add><![CDATA[if (!$context['PrivateTopic']->check($row['id_topic']))
+			continue;
+
+		$filename = preg_replace('~&amp;#(\\d{1,7}|x[0-9a-fA-F]{1,6});~', '&#\\1;', htmlspecialchars($row['filename']));]]></add>
 		</operation>
 	</file>
 </modification>
