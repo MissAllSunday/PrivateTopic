@@ -12,9 +12,8 @@
 		<code>hooks.php</code>
 		<readme type="file" parsebbc="true">readme.txt</readme>
 		<modification>PrivateTopics.xml</modification>
-		<require-file name="PrivateTopics.php" destination="$sourcedir">source</require-file>
-		<require-file name="PrivateTopics.english.php" destination="$languagedir">lang</require-file>
-		<require-file name="PrivateTopics.template.php" destination="$themedir">theme</require-file>
+		<require-file name="Sources/PrivateTopics.php" destination="$sourcedir">source</require-file>
+		<require-dir name="Themes" destination="$boarddir">Theme files</require-dir>
 		<redirect url="$scripturl?action=admin;area=privatetopics" timeout="3000"></redirect>
 	</install>
 
